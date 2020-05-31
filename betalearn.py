@@ -67,12 +67,27 @@ class BetaArray:
     
     # This function will take evidence in the form of a pair of heads and tails values
     # and output the probability of that evidence for each prior in the array.
+    
     def prob_of_evidence(self,evidence):
         assert isinstance(evidence, np.ndarray), "Evidence object is not a numpy ndarray"
         assert evidence.shape[0] == 2, "Evidence array is the wrong shape"
         output = []
         for prior in self.array:
             val, err = integrate.quad(lambda x: self.prob_evidence_at(x, evidence, prior),0,1)
+            output.append(val)
+        return np.array(output)
+
+    # This should probably be tidied up so we have a helper function that wraps
+    # either the above or the below function that returns val.
+    def prob_evidence_fast(self,evidence):
+        assert isinstance(evidence, np.ndarray), "Evidence object is not a numpy ndarray"
+        assert evidence.shape[0] == 2, "Evidence array is the wrong shape"
+        heads, tails = evidence
+        size = heads+tails
+        output = []
+        for prob in self.prob_of_heads:
+            #val, err = integrate.quad(lambda x: self.prob_evidence_at(x, evidence, prior),0,1)
+            val = stats.binom.pmf(heads,size,prob)
             output.append(val)
         return np.array(output)
 
@@ -86,6 +101,14 @@ class BetaArray:
     def alpha_cut(self,evidence,alpha):
         updated_array = self.GC_update(evidence)
         probs = updated_array.prob_of_evidence(evidence)
+        bools = probs >= alpha*np.nanmax(probs)
+        updated_array.mask_array(bools)
+        return updated_array
+
+    # Likewise, this should involve a wrapper.
+    def alpha_cut_fast(self,evidence,alpha):
+        updated_array = self.GC_update(evidence)
+        probs = updated_array.prob_evidence_fast(evidence)
         bools = probs >= alpha*np.nanmax(probs)
         updated_array.mask_array(bools)
         return updated_array
@@ -181,7 +204,7 @@ class LearningSequence:
         for evidence in evidence_stream:
             self.GC_list.append(self.GC_list[-1].GC_update(evidence))
             
-        
+        # We should do some wrapping here too.
         if iter_alpha:
             print("Calculating iterative alpha cut")
             self.iter_alpha_list = [prior]
@@ -191,6 +214,15 @@ class LearningSequence:
                 round += 1
                 self.iter_alpha_list.append(self.iter_alpha_list[-1].alpha_cut(evidence, iter_alpha))
 
+        if iter_alpha_fast:
+            print("Calculating iterative alpha cut (fast)")
+            self.iter_alpha_fast_list = [prior]
+            round=1
+            for evidence in evidence_stream:
+                print("Round", round, "of", self.evidence_length)
+                round += 1
+                self.iter_alpha_fast_list.append(self.iter_alpha_fast_list[-1].alpha_cut_fast(evidence, iter_alpha_fast))
+
         if totev_alpha:
             print("Calculating total evidence alpha cut")
             self.totev_alpha_list=[prior]
@@ -199,6 +231,8 @@ class LearningSequence:
                 print("Round", round, "of", self.evidence_length)
                 round += 1
                 self.totev_alpha_list.append(self.totev_alpha_list[0].alpha_cut(evidence, totev_alpha))
+
+        
                 
 
     # Helper function to create time series of probs of heads
@@ -214,6 +248,11 @@ class LearningSequence:
     def time_series_iter_alpha(self,idx):
         assert self.iter_alpha != 0, "Error: no iter_alpha array"
         return self._time_series_heads(self.iter_alpha_list,idx)
+
+    def time_series_iter_alpha_fast(self,idx):
+        assert self.iter_alpha_fast != 0, "Error: no iter_alpha array"
+        return self._time_series_heads(self.iter_alpha_fast_list,idx)
+        
 
     # This TS doesn't work, because the mask isn't getting applied to the prob of heads.
     def time_series_totev_alpha(self,idx):
@@ -246,13 +285,48 @@ class LearningSequence:
     def graph_iter_v_totev(self):
         self._red_grey(self.time_series_totev_alpha,self.time_series_iter_alpha)
 
+    # Two graphs
+    def _two_graphs(self,ts_top,ts_bottom):
+        fig,axs=plt.subplots(2,1)
+        x = np.arange(0,self.evidence_length+1)
+        for i in np.arange(self.prior.array_size):
+            y = ts_bottom(i)
+            axs[0].plot(x,y,color='0.4', linewidth=1)
+        for i in np.arange(self.prior.array_size):
+            y = ts_top(i)
+            axs[1].plot(x,y,color='0.4', linewidth=1)
+        for i in np.arange(self.prior.array_size):
+            y = ts_top(i)
+            axs[0].plot(x,y,color='r', linewidth=1,marker=".")
+        for i in np.arange(self.prior.array_size):
+            y = ts_bottom(i)
+            axs[1].plot(x,y,color='b', linewidth=1,marker=".")
+        axs[0].tick_params(axis='x', labelbottom=False, labeltop=True)
+        axs[0].set_xticks(np.arange(0,len(self.evidence_words)))
+        axs[1].set_xticks(np.arange(0,len(self.evidence_words)))
+        axs[1].set_xticklabels(self.evidence_words,rotation="vertical")
+        axs[0].set_xticklabels(self.evidence_words,rotation="vertical")
+        plt.subplots_adjust(hspace=0.2)
+        #plt.savefig("commutativity.pdf")
+        print("Figure saved")
+
+    def two_graph_iter_iter_fast(self):
+        self._two_graphs(self.time_series_iter_alpha,self.time_series_iter_alpha_fast)
+
+
 # TODO:
-# two graphs
+# two graphs: evidence/evidence permuted labels
 # measure P^(H) - P_(H) as a function of "time"
 # random prior
 # multiple alpha values
+# approx: totev
         
         
 def test():
-    return LearningSequence(BetaPrior(8), EvidenceStream(0.3,8,8), totev_alpha=0.5, iter_alpha=0.5)
+    return LearningSequence(BetaPrior(5), EvidenceStream(0.3,4,8), iter_alpha=0.5,iter_alpha_fast=0.5)
     
+
+
+
+
+
