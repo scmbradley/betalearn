@@ -39,10 +39,15 @@ class BetaArray:
     
     # Take an array of booleans, check it's the right length, manipulate it into an array of pairs
     # Make the array of params a masked array, add mask
-    def set_mask(self,bools):
-        assert len(bools) == self.array_size, "Boolean array is the wrong length for set_mask"
-        masker = np.transpose(np.concatenate((bools,bools)).reshape(2,self.array_size))
-        self.masker = masker
+    ####################
+    # Not actually used. I'm not using masked arrays, because they don't behave quite how I want
+    # so I'm kind of bodging together a replacement using np.where and n.nan
+    ####################
+    # def set_mask(self,bools):
+    #     assert len(bools) == self.array_size, "Boolean array is the wrong length for set_mask"
+    #     masker = np.transpose(np.concatenate((bools,bools)).reshape(2,self.array_size))
+    #     self.masker = masker
+    ####################
 
     # Returns a masked array of params
     def mask_array(self,bools):
@@ -50,47 +55,52 @@ class BetaArray:
         self.array = np.where(masker,self.array,np.nan)
         self.prob_of_heads= np.where(bools,self.prob_of_heads,np.nan)
 
-    def masked_prob_heads(self,bools):
-        np.where(bools,self.prob_of_heads, np.nan)
-        
+    ####################
+    # This is folded in to mask_array
+    ####################
+    # def masked_prob_heads(self,bools):
+    #     np.where(bools,self.prob_of_heads, np.nan)
+    ####################
+    
     # Helper functions for prob_of_evidence
     # This one returns the pdf at theta of a a distribution (a pair of parameters)
-    def pdf_at(self,theta,params):
+    def _pdf_at(self,theta,params):
         return stats.beta.pdf(theta,params[0],params[1])
 
     # This one returns the probability of the evidence at a distribution
-    def prob_evidence_at(self,theta,evidence,params):
+    def _prob_evidence_at(self,theta,evidence,params):
         heads, tails = evidence
         size = heads+tails
-        return stats.binom.pmf(heads,size,theta)*self.pdf_at(theta,params)
+        return stats.binom.pmf(heads,size,theta)*self._pdf_at(theta,params)
 
     
     # This function will take evidence in the form of a pair of heads and tails values
     # and output the probability of that evidence for each prior in the array.
-    
-    def prob_of_evidence(self,evidence):
+    def _prob_of_evidence(self,evidence, likelihood_fn,loop_array):
         assert isinstance(evidence, np.ndarray), "Evidence object is not a numpy ndarray"
         assert evidence.shape[0] == 2, "Evidence array is the wrong shape"
         output = []
-        for prior in self.array:
-            val, err = integrate.quad(lambda x: self.prob_evidence_at(x, evidence, prior),0,1)
+        for element in loop_array:
+            val = likelihood_fn(evidence,element)
             output.append(val)
         return np.array(output)
 
-    # This should probably be tidied up so we have a helper function that wraps
-    # either the above or the below function that returns val.
-    def prob_evidence_fast(self,evidence):
-        assert isinstance(evidence, np.ndarray), "Evidence object is not a numpy ndarray"
-        assert evidence.shape[0] == 2, "Evidence array is the wrong shape"
+    def _likelihood_slow(self,evidence,param):
+        val, err = integrate.quad(lambda x: self._prob_evidence_at(x, evidence, param),0,1)
+        return val
+
+    def _likelihood_fast(self,evidence,prob):
         heads, tails = evidence
         size = heads+tails
-        output = []
-        for prob in self.prob_of_heads:
-            #val, err = integrate.quad(lambda x: self.prob_evidence_at(x, evidence, prior),0,1)
-            val = stats.binom.pmf(heads,size,prob)
-            output.append(val)
-        return np.array(output)
+        val = stats.binom.pmf(heads,size,prob)
+        return val
 
+    def prob_of_evidence(self,evidence):
+        return self._prob_of_evidence(evidence,self._likelihood_slow, self.array)
+
+    def prob_of_evidence_fast(self,evidence):
+        return self._prob_of_evidence(evidence, self._likelihood_fast, self.prob_of_heads)
+    
 
     # GC update works by simply adding the params from the evidence to the array
     def GC_update(self,evidence):
@@ -108,7 +118,7 @@ class BetaArray:
     # Likewise, this should involve a wrapper.
     def alpha_cut_fast(self,evidence,alpha):
         updated_array = self.GC_update(evidence)
-        probs = updated_array.prob_evidence_fast(evidence)
+        probs = updated_array.prob_of_evidence_fast(evidence)
         bools = probs >= alpha*np.nanmax(probs)
         updated_array.mask_array(bools)
         return updated_array
@@ -150,19 +160,11 @@ class EvidenceStream:
     def __init__(self,true_theta,length,number_samples):
         evarr = stats.binom.rvs(number_samples,true_theta,size=length)
         self.evidence= np.transpose(np.append(evarr,(np.ones(length,dtype=int)*number_samples)-evarr).reshape(2,length))
-        self.evidence_words= ["prior"]
-        for x in self.evidence:
-            s=""
-            e = [str(x[0]),"H",str(x[1]),"T"]
-            self.evidence_words.append(s.join(e))
-            
-        # This returns an iterable already
         self.permuted = np.random.permutation(self.evidence)
-        self.evidence_words_permuted = ["prior"]
-        for x in self.permuted:
-            s=""
-            e = [str(x[0]),"H",str(x[1]),"T"]
-            self.evidence_words_permuted.append(s.join(e))
+        # Words are generated using the function defined below.
+        self.evidence_words = self.make_words(self.evidence)
+        self.evidence_words_permuted = self.make_words(self.permuted)
+
         self.evidence_length = length
         # Cumulative sum of evidence for totev update
         self.cumulative = np.cumsum(self.evidence,axis=0)
@@ -171,8 +173,21 @@ class EvidenceStream:
     def __getitem__(self,key):
         return self.evidence[key]
 
+    def _evidence_into_words(self,arr):
+        """
+        Takes a pair of numbers and translates them into a words e.g. "4H4T"
+        """
+        e = [str(x[0]),"H",str(x[1]),"T"]
+        return "".join(e)
     
-            
+    def make_words(self,evidence):
+        words= ["prior"]
+        for x in evidence:
+            s=""
+            e = [str(x[0]),"H",str(x[1]),"T"]
+            words.append(s.join(e))
+        return words
+
 
 # LearningSequence produces a list of BetaArrays produced by successive learning.
 # Several learning outputs can be produced.
@@ -203,7 +218,7 @@ class LearningSequence:
         self.GC_list = [prior]
         for evidence in evidence_stream:
             self.GC_list.append(self.GC_list[-1].GC_update(evidence))
-            
+
         # We should do some wrapping here too.
         if iter_alpha:
             print("Calculating iterative alpha cut")
@@ -232,8 +247,56 @@ class LearningSequence:
                 round += 1
                 self.totev_alpha_list.append(self.totev_alpha_list[0].alpha_cut(evidence, totev_alpha))
 
-        
-                
+        if totev_alpha_fast:
+            print("Calculating total evidence alpha cut")
+            self.totev_alpha_fast_list=[prior]
+            round = 1
+            for evidence in evidence_stream.cumulative:
+                print("Round", round, "of", self.evidence_length)
+                round += 1
+                self.totev_alpha_fast_list.append(self.totev_alpha_fast_list[0].alpha_cut_fast(evidence, totev_alpha_fast))
+
+        if iter_alpha:
+            self.alt_iter_alpha_list  = self._gen_array_list(self.evidence_stream, iter_alpha, self.prior, iterative=True,fast=False)
+
+        if iter_alpha_fast:
+            self.alt_iter_alpha_fast_list = self._gen_array_list(self.evidence_stream, iter_alpha_fast, self.prior, iterative=True, fast=True)
+        if totev_alpha:
+            self.alt_totev_alpha_list = self._gen_array_list(self.evidence_stream, totev_alpha, self.prior, iterative=False, fast=False)
+        if totev_alpha_fast:
+            self.alt_totev_alpha_fast_list = self._gen_array_list(self.evidence_stream, totev_alpha_fast, self.prior, iterative=False, fast=True)
+
+
+    def _gen_array_list(self, evidence_stream, alpha, prior, fast=False, iterative=False):
+        """ 
+        Generates a list of parameter values for updated distributions.
+
+        Required parameters: an evidence_stream, an alpha value, and a prior to start with.
+        Defaults to slow total evidence updating.
+        """
+        # Set the index to -1 (last item of the list) or 0 (first item)
+        # depending on whether we are iterative or total evidence updating
+        if iterative:
+            idx = -1
+            stream = self.evidence_stream
+        else:
+            idx = 0
+            stream = self.evidence_stream.cumulative
+        length = self.evidence_length
+        the_list = [prior]
+        if fast:
+            update_fn = lambda x: the_list[x].alpha_cut_fast
+        else:
+            update_fn = lambda x: the_list[x].alpha_cut
+        round=1
+        for evidence in stream:
+            round += 1
+            # OK. Look, there's a little bit of currying going on in this next line.
+            # I needed to do it this way because when I set update_fn
+            # above, it doesn't know yet what idx will be.
+            the_list.append(update_fn(idx)(evidence,alpha))
+        return the_list
+
 
     # Helper function to create time series of probs of heads
     def _time_series_heads(self,arr,idx):
@@ -252,12 +315,14 @@ class LearningSequence:
     def time_series_iter_alpha_fast(self,idx):
         assert self.iter_alpha_fast != 0, "Error: no iter_alpha array"
         return self._time_series_heads(self.iter_alpha_fast_list,idx)
-        
 
-    # This TS doesn't work, because the mask isn't getting applied to the prob of heads.
     def time_series_totev_alpha(self,idx):
         assert self.totev_alpha != 0, "Error: no totev_alpha array"
         return self._time_series_heads(self.totev_alpha_list,idx)
+
+    # def time_series_totev_alpha_fast(self,idx):
+    #     assert self.totev_alpha_fast != 0, "Error: no totev_alpha array"
+    #     return self._time_series_heads(self.totev_alpha_fast_list,idx)
 
 
     # Graphing as a method of LearningSequence
@@ -286,7 +351,8 @@ class LearningSequence:
         self._red_grey(self.time_series_totev_alpha,self.time_series_iter_alpha)
 
     # Two graphs
-    def _two_graphs(self,ts_top,ts_bottom):
+    # NOTE: permuted label appears on the bottom, call the function accordingly
+    def _two_graphs(self,ts_top,ts_bottom,label_permuted=False):
         fig,axs=plt.subplots(2,1)
         x = np.arange(0,self.evidence_length+1)
         for i in np.arange(self.prior.array_size):
@@ -304,7 +370,12 @@ class LearningSequence:
         axs[0].tick_params(axis='x', labelbottom=False, labeltop=True)
         axs[0].set_xticks(np.arange(0,len(self.evidence_words)))
         axs[1].set_xticks(np.arange(0,len(self.evidence_words)))
-        axs[1].set_xticklabels(self.evidence_words,rotation="vertical")
+
+        if label_permuted:
+            axs[1].set_xticklabels(self.evidence_words_permuted,rotation="vertical")
+        else:
+            axs[1].set_xticklabels(self.evidence_words,rotation="vertical")
+
         axs[0].set_xticklabels(self.evidence_words,rotation="vertical")
         plt.subplots_adjust(hspace=0.2)
         #plt.savefig("commutativity.pdf")
@@ -313,6 +384,8 @@ class LearningSequence:
     def two_graph_iter_iter_fast(self):
         self._two_graphs(self.time_series_iter_alpha,self.time_series_iter_alpha_fast)
 
+    # def commutativity(self):
+    #     self._two_graphs(self.
 
 # TODO:
 # two graphs: evidence/evidence permuted labels
@@ -320,13 +393,13 @@ class LearningSequence:
 # random prior
 # multiple alpha values
 # approx: totev
+# docstrings
         
         
 def test():
-    return LearningSequence(BetaPrior(5), EvidenceStream(0.3,4,8), iter_alpha=0.5,iter_alpha_fast=0.5)
+    return LearningSequence(BetaPrior(3), EvidenceStream(0.3,2,8),totev_alpha=0.5)
     
-
-
-
-
-
+def gen_test():
+    foo = test()
+    return foo.totev_alpha_list, foo.alt_totev_alpha_list
+    
