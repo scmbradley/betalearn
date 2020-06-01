@@ -142,11 +142,24 @@ class BetaPrior(BetaArray):
         
         # We still don't have any really stubborn beta priors in here.
         # If we want some priors which converge really slowly, set stubborns=True
-        if stubborns:
-            stub_array = []
-            for x in np.arange(2,101,3):
-                stub_array.append(x*np.array([4,1]))
-            self.array = np.concatenate((self.array,stub_array))
+        if stubborns != False:
+            stub_list = [self.array]
+            try:
+                stub_max = stubborns[0]
+                stub_step = stubborns[1]
+            except TypeError as err:
+                print("Error creating stubborns.")
+                print(err)
+                print("stubborns should be a pair of ints setting the max and step for the loop.")
+                stub_max = 10
+                stub_step = 2
+                print("Defaulting to stub_max = {}, stub_step = {}".format(stub_max,stub_step))
+                
+            for x in range(1,stub_max,stub_step):
+                stub_list.append(self.array*x)
+                stub_array = np.concatenate(stub_list)
+            self.array = np.unique(stub_array,axis=0)
+
 
         self.array_size = self.array.shape[0]
         self.prob_of_heads=self.array[:,0]/np.sum(self.array,axis=1)
@@ -219,52 +232,56 @@ class LearningSequence:
         for evidence in evidence_stream:
             self.GC_list.append(self.GC_list[-1].GC_update(evidence))
 
-        # We should do some wrapping here too.
+        # # We should do some wrapping here too.
+        # if iter_alpha:
+        #     print("Calculating iterative alpha cut")
+        #     self.iter_alpha_list = [prior]
+        #     round=1
+        #     for evidence in evidence_stream:
+        #         print("Round", round, "of", self.evidence_length)
+        #         round += 1
+        #         self.iter_alpha_list.append(self.iter_alpha_list[-1].alpha_cut(evidence, iter_alpha))
+
+        # if iter_alpha_fast:
+        #     print("Calculating iterative alpha cut (fast)")
+        #     self.iter_alpha_fast_list = [prior]
+        #     round=1
+        #     for evidence in evidence_stream:
+        #         print("Round", round, "of", self.evidence_length)
+        #         round += 1
+        #         self.iter_alpha_fast_list.append(self.iter_alpha_fast_list[-1].alpha_cut_fast(evidence, iter_alpha_fast))
+
+        # if totev_alpha:
+        #     print("Calculating total evidence alpha cut")
+        #     self.totev_alpha_list=[prior]
+        #     round = 1
+        #     for evidence in evidence_stream.cumulative:
+        #         print("Round", round, "of", self.evidence_length)
+        #         round += 1
+        #         self.totev_alpha_list.append(self.totev_alpha_list[0].alpha_cut(evidence, totev_alpha))
+
+        # if totev_alpha_fast:
+        #     print("Calculating total evidence alpha cut")
+        #     self.totev_alpha_fast_list=[prior]
+        #     round = 1
+        #     for evidence in evidence_stream.cumulative:
+        #         print("Round", round, "of", self.evidence_length)
+        #         round += 1
+        #         self.totev_alpha_fast_list.append(self.totev_alpha_fast_list[0].alpha_cut_fast(evidence, totev_alpha_fast))
+
         if iter_alpha:
-            print("Calculating iterative alpha cut")
-            self.iter_alpha_list = [prior]
-            round=1
-            for evidence in evidence_stream:
-                print("Round", round, "of", self.evidence_length)
-                round += 1
-                self.iter_alpha_list.append(self.iter_alpha_list[-1].alpha_cut(evidence, iter_alpha))
+            self.iter_alpha_list  = self._gen_array_list(
+                self.evidence_stream, iter_alpha, self.prior, iterative=True,fast=False)
 
         if iter_alpha_fast:
-            print("Calculating iterative alpha cut (fast)")
-            self.iter_alpha_fast_list = [prior]
-            round=1
-            for evidence in evidence_stream:
-                print("Round", round, "of", self.evidence_length)
-                round += 1
-                self.iter_alpha_fast_list.append(self.iter_alpha_fast_list[-1].alpha_cut_fast(evidence, iter_alpha_fast))
-
+            self.iter_alpha_fast_list = self._gen_array_list(
+                self.evidence_stream, iter_alpha_fast, self.prior, iterative=True, fast=True)
         if totev_alpha:
-            print("Calculating total evidence alpha cut")
-            self.totev_alpha_list=[prior]
-            round = 1
-            for evidence in evidence_stream.cumulative:
-                print("Round", round, "of", self.evidence_length)
-                round += 1
-                self.totev_alpha_list.append(self.totev_alpha_list[0].alpha_cut(evidence, totev_alpha))
-
+            self.totev_alpha_list = self._gen_array_list(
+                self.evidence_stream, totev_alpha, self.prior, iterative=False, fast=False)
         if totev_alpha_fast:
-            print("Calculating total evidence alpha cut")
-            self.totev_alpha_fast_list=[prior]
-            round = 1
-            for evidence in evidence_stream.cumulative:
-                print("Round", round, "of", self.evidence_length)
-                round += 1
-                self.totev_alpha_fast_list.append(self.totev_alpha_fast_list[0].alpha_cut_fast(evidence, totev_alpha_fast))
-
-        if iter_alpha:
-            self.alt_iter_alpha_list  = self._gen_array_list(self.evidence_stream, iter_alpha, self.prior, iterative=True,fast=False)
-
-        if iter_alpha_fast:
-            self.alt_iter_alpha_fast_list = self._gen_array_list(self.evidence_stream, iter_alpha_fast, self.prior, iterative=True, fast=True)
-        if totev_alpha:
-            self.alt_totev_alpha_list = self._gen_array_list(self.evidence_stream, totev_alpha, self.prior, iterative=False, fast=False)
-        if totev_alpha_fast:
-            self.alt_totev_alpha_fast_list = self._gen_array_list(self.evidence_stream, totev_alpha_fast, self.prior, iterative=False, fast=True)
+            self.totev_alpha_fast_list = self._gen_array_list(
+                self.evidence_stream, totev_alpha_fast, self.prior, iterative=False, fast=True)
 
 
     def _gen_array_list(self, evidence_stream, alpha, prior, fast=False, iterative=False):
@@ -279,17 +296,23 @@ class LearningSequence:
         if iterative:
             idx = -1
             stream = self.evidence_stream
+            method = "iterative alpha cut, alpha = {}".format(alpha)
         else:
             idx = 0
             stream = self.evidence_stream.cumulative
+            method = "total evidence alpha cut, alpha = {}".format(alpha)
         length = self.evidence_length
         the_list = [prior]
         if fast:
             update_fn = lambda x: the_list[x].alpha_cut_fast
+            fast_word = "(fast)"
         else:
             update_fn = lambda x: the_list[x].alpha_cut
+            fast_word = ""
         round=1
+        print("Generating updated priors using {} {}".format(method, fast_word))
         for evidence in stream:
+            print("Generating updated priors. Round {} of {}".format(round, length))
             round += 1
             # OK. Look, there's a little bit of currying going on in this next line.
             # I needed to do it this way because when I set update_fn
@@ -337,12 +360,17 @@ class LearningSequence:
             y = ts_red(i)
             axs.plot(x,y,color='r',linewidth=1,marker=".")
         axs.set_xticks(np.arange(0,len(self.evidence_words)))
+        axs.text(1.05,0.5,"One", transform=axs.transAxes)
+        print(axs.get_xlim())
         axs.set_xticklabels(self.evidence_words,rotation="vertical")
         #    axs.margins(0.2)
         plt.subplots_adjust(bottom=0.15)
 
     def graph_iter_v_GC(self):
         self._red_grey(self.time_series_iter_alpha,self.time_series_GC)
+
+    def graph_iter_fast_v_GC(self):
+        self._red_grey(self.time_series_iter_alpha_fast,self.time_series_GC)
 
     def graph_totev_v_GC(self):
         self._red_grey(self.time_series_totev_alpha,self.time_series_GC)
@@ -352,8 +380,10 @@ class LearningSequence:
 
     # Two graphs
     # NOTE: permuted label appears on the bottom, call the function accordingly
-    def _two_graphs(self,ts_top,ts_bottom,label_permuted=False):
+    def _two_graphs(self,ts_top,ts_bottom,label_permuted=False,top_label="",bottom_label=""):
         fig,axs=plt.subplots(2,1)
+        fig.set_tight_layout(True)
+        # fig.subplots_adjust(right=0.8)
         x = np.arange(0,self.evidence_length+1)
         for i in np.arange(self.prior.array_size):
             y = ts_bottom(i)
@@ -370,19 +400,26 @@ class LearningSequence:
         axs[0].tick_params(axis='x', labelbottom=False, labeltop=True)
         axs[0].set_xticks(np.arange(0,len(self.evidence_words)))
         axs[1].set_xticks(np.arange(0,len(self.evidence_words)))
-
+        
         if label_permuted:
             axs[1].set_xticklabels(self.evidence_words_permuted,rotation="vertical")
         else:
             axs[1].set_xticklabels(self.evidence_words,rotation="vertical")
 
+        axs[0].text(1.05,0.5,top_label, transform=axs[0].transAxes)
+        axs[1].text(1.05,0.5,bottom_label,transform=axs[1].transAxes)
+
         axs[0].set_xticklabels(self.evidence_words,rotation="vertical")
+        # axs[0].set_title("One",horizontalalignment="right")
+        # axs[1].ylabel("Two")
         plt.subplots_adjust(hspace=0.2)
         #plt.savefig("commutativity.pdf")
         print("Figure saved")
 
     def two_graph_iter_iter_fast(self):
-        self._two_graphs(self.time_series_iter_alpha,self.time_series_iter_alpha_fast)
+        self._two_graphs(
+            self.time_series_iter_alpha,self.time_series_iter_alpha_fast,
+            top_label="Iterative alpha cut",bottom_label="Fast iterative alpha cut")
 
     # def commutativity(self):
     #     self._two_graphs(self.
@@ -392,14 +429,14 @@ class LearningSequence:
 # measure P^(H) - P_(H) as a function of "time"
 # random prior
 # multiple alpha values
-# approx: totev
 # docstrings
         
         
 def test():
-    return LearningSequence(BetaPrior(3), EvidenceStream(0.3,2,8),totev_alpha=0.5)
+    return LearningSequence(BetaPrior(4), EvidenceStream(0.3,4,8),iter_alpha_fast=0.5,iter_alpha=0.5)
+
+def graph_test():
+    test().two_graph_iter_iter_fast()
+    plt.show()
     
-def gen_test():
-    foo = test()
-    return foo.totev_alpha_list, foo.alt_totev_alpha_list
     
