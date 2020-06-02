@@ -103,7 +103,9 @@ class BetaPrior(BetaArray):
     should be set to a pair of ints, for the max and the step.
     fillers: boolean that fills in the (0,1/size) and (1/1-size,1) ranges.
     """
-    def __init__(self,size,stubborns=False, fillers=False):
+    def __init__(self,size,
+                 stubborns=False, fillers=False,
+                 randoms=False):
         # self.size = size
         # create an array pairs (i,j) for i,j <= size
         index_array = np.transpose(np.indices((size,size)) + 1).reshape(size**2,2)
@@ -137,6 +139,22 @@ class BetaPrior(BetaArray):
                 stub_list.append(self.array*x)
                 stub_array = np.concatenate(stub_list)
             self.array = np.unique(stub_array,axis=0)
+        if randoms != False:
+            try:
+                randoms_size = randoms[0]
+                randoms_max = randoms[1]
+            except: TypeError as err:
+                print("Error creating randoms")
+                print(err)
+                print("Randoms should be a pair of ints setting the size and max for random")
+                randoms_size=50
+                randoms_max=50
+                print("Defaulting to randoms_size = {}, and randoms_max = {}".format(
+                    randoms_size,randoms_max))
+            pass
+
+
+            
 
 
         self.array_size = self.array.shape[0]
@@ -457,7 +475,6 @@ class LearningSequence:
 # TODO:
 # random prior
 # multiple alpha values
-# docstrings
 # IDM? (throw out all priors with high t value?)
         
 
