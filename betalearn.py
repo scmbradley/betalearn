@@ -7,6 +7,12 @@ import matplotlib.pyplot as plt
 np.random.seed(seed=42)
 
 class BetaArray:
+    """
+    Main class for the array of beta distributions
+
+    Takes an array as an argument, and defines a bunch of ways of manipulating it.
+    Normally, you'd generate BetaArray using BetaPrior subclass.
+    """
     def __init__(self,arr):
         assert isinstance(arr,np.ndarray), "Input object is not a numpy array"
         assert arr.shape[1] == 2, "Array is the wrong shape"
@@ -18,49 +24,12 @@ class BetaArray:
     def __getitem__(self,key):
         return self.array[key]
 
-    
-    # Define some private functions that are helpers for prob_of_evidence
-
-    ####################
-    #  Functions need to take individual params,
-    #  because integrate won't work over an array
-    ####################
-    # # This one returns an array of pdf values for theta
-    # def pdf_at(self,theta):
-    #     return stats.beta.pdf(theta,self.array[:,0],self.array[:,1])
-    #
-    # #This one returns an array of pdf values for probability of evidence at theta
-    # def prob_evidence_at(self,theta,evidence):
-    #     heads, tails = evidence
-    #     size = heads + tails
-    #     return stats.binom.pmf(heads, size, theta)* self.pdf_at(theta)
-    ####################
-
-    
-    # Take an array of booleans, check it's the right length, manipulate it into an array of pairs
-    # Make the array of params a masked array, add mask
-    ####################
-    # Not actually used. I'm not using masked arrays, because they don't behave quite how I want
-    # so I'm kind of bodging together a replacement using np.where and n.nan
-    ####################
-    # def set_mask(self,bools):
-    #     assert len(bools) == self.array_size, "Boolean array is the wrong length for set_mask"
-    #     masker = np.transpose(np.concatenate((bools,bools)).reshape(2,self.array_size))
-    #     self.masker = masker
-    ####################
 
     # Returns a masked array of params
     def mask_array(self,bools):
         masker = np.transpose(np.concatenate((bools,bools)).reshape(2,self.array_size))
         self.array = np.where(masker,self.array,np.nan)
         self.prob_of_heads= np.where(bools,self.prob_of_heads,np.nan)
-
-    ####################
-    # This is folded in to mask_array
-    ####################
-    # def masked_prob_heads(self,bools):
-    #     np.where(bools,self.prob_of_heads, np.nan)
-    ####################
     
     # Helper functions for prob_of_evidence
     # This one returns the pdf at theta of a a distribution (a pair of parameters)
@@ -125,6 +94,14 @@ class BetaArray:
 
 # The BetaPrior is a subclass of the BetaArray: the one you start with
 class BetaPrior(BetaArray):
+    """
+    Generates a BetaArray object with a range of values for mu and nu.
+    
+    size: determines how many distributions to generate. 
+    stubborns: adds additional distributions that are slower to converge.
+    should be set to a pair of ints, for the max and the step.
+    fillers: boolean that fills in the (0,1/size) and (1/1-size,1) ranges.
+    """
     def __init__(self,size,stubborns=False, fillers=False):
         # self.size = size
         # create an array pairs (i,j) for i,j <= size
@@ -170,6 +147,15 @@ class BetaPrior(BetaArray):
 # Create an evidence class that we can iterate over.
 
 class EvidenceStream:
+    """
+    Generates a stream of evidence to be learned by a BetaPrior in a LearningSequence
+
+    true_theta: the chance of heads
+    length: how many instances of evidence
+    number_samples: how big each instance of evidence is.
+
+    So: you get length pieces of evidence each of which tell you how number_samples flips landed.
+    """
     def __init__(self,true_theta,length,number_samples):
         evarr = stats.binom.rvs(number_samples,true_theta,size=length)
         self.evidence= np.transpose(np.append(evarr,(np.ones(length,dtype=int)*number_samples)-evarr).reshape(2,length))
@@ -212,76 +198,63 @@ class EvidenceStream:
 # set the alpha values to zero (meaning, False). If they're set to a value,
 # Run integrations
 class LearningSequence:
+    """
+    Produces a sequence of BetaArrays, using an EvidenceStream, and switches for various updates.
+
+    prior: a BetaArray object that is the prior for the update
+    evidence_stream: an EvidenceStream object that yields the evidence for learning
+    iter_alpha, iter_alpha_fast, totev_alpha, totev_alpha_fast should be either False, or in (0,1)
+    permuted_evidence, permuted_evidence_fast are booleans for whether to produce permuted evidence time series
+    """
     def __init__(self,prior,evidence_stream,
                  iter_alpha = 0, iter_alpha_fast=0,
                  totev_alpha = 0, totev_alpha_fast = 0,
-                 permuted_evidence=False):
+                 permuted_evidence=False,
+                 permuted_evidence_fast=False):
         assert isinstance(prior,BetaArray), "prior is not a BetaArray"
         assert isinstance(evidence_stream,EvidenceStream), "evidence is not an EvidenceStream"
 #        assert evidence_stream.shape[1] == 2, "evidence stream is wrong shape"
         self.prior = prior
         self.evidence_stream = evidence_stream
+        self.evidence_stream_permuted = evidence_stream.permuted
         self.iter_alpha = iter_alpha
         self.iter_alpha_fast = iter_alpha_fast
         self.totev_alpha = totev_alpha
         self.totev_alpha_fast = totev_alpha_fast
         self.evidence_length = evidence_stream.evidence_length
         self.evidence_words = evidence_stream.evidence_words
+        self.evidence_words_permuted = evidence_stream.evidence_words_permuted
         # Generate GC update
         self.GC_list = [prior]
         for evidence in evidence_stream:
             self.GC_list.append(self.GC_list[-1].GC_update(evidence))
 
-        # # We should do some wrapping here too.
-        # if iter_alpha:
-        #     print("Calculating iterative alpha cut")
-        #     self.iter_alpha_list = [prior]
-        #     round=1
-        #     for evidence in evidence_stream:
-        #         print("Round", round, "of", self.evidence_length)
-        #         round += 1
-        #         self.iter_alpha_list.append(self.iter_alpha_list[-1].alpha_cut(evidence, iter_alpha))
-
-        # if iter_alpha_fast:
-        #     print("Calculating iterative alpha cut (fast)")
-        #     self.iter_alpha_fast_list = [prior]
-        #     round=1
-        #     for evidence in evidence_stream:
-        #         print("Round", round, "of", self.evidence_length)
-        #         round += 1
-        #         self.iter_alpha_fast_list.append(self.iter_alpha_fast_list[-1].alpha_cut_fast(evidence, iter_alpha_fast))
-
-        # if totev_alpha:
-        #     print("Calculating total evidence alpha cut")
-        #     self.totev_alpha_list=[prior]
-        #     round = 1
-        #     for evidence in evidence_stream.cumulative:
-        #         print("Round", round, "of", self.evidence_length)
-        #         round += 1
-        #         self.totev_alpha_list.append(self.totev_alpha_list[0].alpha_cut(evidence, totev_alpha))
-
-        # if totev_alpha_fast:
-        #     print("Calculating total evidence alpha cut")
-        #     self.totev_alpha_fast_list=[prior]
-        #     round = 1
-        #     for evidence in evidence_stream.cumulative:
-        #         print("Round", round, "of", self.evidence_length)
-        #         round += 1
-        #         self.totev_alpha_fast_list.append(self.totev_alpha_fast_list[0].alpha_cut_fast(evidence, totev_alpha_fast))
-
         if iter_alpha:
             self.iter_alpha_list  = self._gen_array_list(
                 self.evidence_stream, iter_alpha, self.prior, iterative=True,fast=False)
+            if permuted_evidence:
+                self.iter_alpha_perm_list = self._gen_array_list(
+                    self.evidence_stream_permuted, iter_alpha, self.prior, iterative=True, fast=False)
 
         if iter_alpha_fast:
             self.iter_alpha_fast_list = self._gen_array_list(
                 self.evidence_stream, iter_alpha_fast, self.prior, iterative=True, fast=True)
+            print(self.evidence_stream.evidence)
+            if permuted_evidence_fast:
+                self.iter_alpha_fast_perm_list = self._gen_array_list(
+                    self.evidence_stream_permuted, iter_alpha_fast,
+                    self.prior, iterative=True, fast=True)
+            print(self.evidence_stream_permuted)
+        # Permuted evidence for iter only, since totev is obviously commutative.
+
         if totev_alpha:
             self.totev_alpha_list = self._gen_array_list(
                 self.evidence_stream, totev_alpha, self.prior, iterative=False, fast=False)
+
         if totev_alpha_fast:
             self.totev_alpha_fast_list = self._gen_array_list(
                 self.evidence_stream, totev_alpha_fast, self.prior, iterative=False, fast=True)
+
 
 
     def _gen_array_list(self, evidence_stream, alpha, prior, fast=False, iterative=False):
@@ -295,11 +268,11 @@ class LearningSequence:
         # depending on whether we are iterative or total evidence updating
         if iterative:
             idx = -1
-            stream = self.evidence_stream
+            stream = evidence_stream
             method = "iterative alpha cut, alpha = {}".format(alpha)
         else:
             idx = 0
-            stream = self.evidence_stream.cumulative
+            stream = evidence_stream.cumulative
             method = "total evidence alpha cut, alpha = {}".format(alpha)
         length = self.evidence_length
         the_list = [prior]
@@ -310,9 +283,11 @@ class LearningSequence:
             update_fn = lambda x: the_list[x].alpha_cut
             fast_word = ""
         round=1
+        # Currently doesn't report whether it's using permuted evidence or not.
         print("Generating updated priors using {} {}".format(method, fast_word))
         for evidence in stream:
             print("Generating updated priors. Round {} of {}".format(round, length))
+            print(evidence)
             round += 1
             # OK. Look, there's a little bit of currying going on in this next line.
             # I needed to do it this way because when I set update_fn
@@ -336,16 +311,22 @@ class LearningSequence:
         return self._time_series_heads(self.iter_alpha_list,idx)
 
     def time_series_iter_alpha_fast(self,idx):
-        assert self.iter_alpha_fast != 0, "Error: no iter_alpha array"
+        assert self.iter_alpha_fast != 0, "Error: no iter_alpha_fast array"
         return self._time_series_heads(self.iter_alpha_fast_list,idx)
+
+    def time_series_iter_alpha_perm(self,idx):
+        return self._time_series_heads(self.iter_alpha_perm_list,idx)
+
+    def time_series_iter_alpha_fast_perm(self,idx):
+        return self._time_series_heads(self.iter_alpha_fast_perm_list,idx)
 
     def time_series_totev_alpha(self,idx):
         assert self.totev_alpha != 0, "Error: no totev_alpha array"
         return self._time_series_heads(self.totev_alpha_list,idx)
 
-    # def time_series_totev_alpha_fast(self,idx):
-    #     assert self.totev_alpha_fast != 0, "Error: no totev_alpha array"
-    #     return self._time_series_heads(self.totev_alpha_fast_list,idx)
+    def time_series_totev_alpha_fast(self,idx):
+        assert self.totev_alpha_fast != 0, "Error: no totev_alpha_fast array"
+        return self._time_series_heads(self.totev_alpha_fast_list,idx)
 
 
     # Graphing as a method of LearningSequence
@@ -419,24 +400,40 @@ class LearningSequence:
     def two_graph_iter_iter_fast(self):
         self._two_graphs(
             self.time_series_iter_alpha,self.time_series_iter_alpha_fast,
-            top_label="Iterative alpha cut",bottom_label="Fast iterative alpha cut")
+            top_label="Iterative\n alpha cut",bottom_label="Fast iterative\n alpha cut")
 
-    # def commutativity(self):
-    #     self._two_graphs(self.
+    def commutativity(self,fast=False):
+        if fast:
+            ts_one,ts_two = self.time_series_iter_alpha_fast, self.time_series_iter_alpha_fast_perm
+        else:
+            ts_one, ts_two = self.time_series_iter_alpha,self.time_series_iter_alpha_perm
+        print(ts_one)
+        print(ts_two)
+        self._two_graphs(
+            ts_one,ts_two,
+            top_label="Original\n evidence series",
+            bottom_label = "Permuted\n evidence series",
+            label_permuted=True)
 
 # TODO:
-# two graphs: evidence/evidence permuted labels
 # measure P^(H) - P_(H) as a function of "time"
 # random prior
 # multiple alpha values
 # docstrings
+# IDM? (throw out all priors with high t value?)
         
-        
-def test():
-    return LearningSequence(BetaPrior(4), EvidenceStream(0.3,4,8),iter_alpha_fast=0.5,iter_alpha=0.5)
+
+def test(fast=True):
+    if fast:
+        return LearningSequence(
+            BetaPrior(4), EvidenceStream(0.3,8,8),iter_alpha_fast = 0.5,permuted_evidence_fast=True)
+
+    else:
+        return LearningSequence(
+            BetaPrior(4), EvidenceStream(0.3,8,8),iter_alpha = 0.5,permuted_evidence=True)
 
 def graph_test():
-    test().two_graph_iter_iter_fast()
+    test().commutativity(fast=False)
     plt.show()
     
     
