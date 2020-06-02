@@ -4,7 +4,7 @@ import scipy.integrate as integrate
 import matplotlib.pyplot as plt
 
 # For testing purposes:
-np.random.seed(seed=42)
+
 
 class BetaArray:
     """
@@ -119,7 +119,23 @@ class BetaPrior(BetaArray):
             top_range = np.transpose(np.array((filler_vals,filler_ones)))
             bottom_range = np.transpose(np.array((filler_ones,filler_vals)))
             self.array = np.concatenate((self.array,top_range,bottom_range))
-        
+
+        if randoms != False:
+            try:
+                randoms_size = randoms[0]
+                randoms_max = randoms[1]
+            except TypeError as err:
+                print("Error creating randoms")
+                print(err)
+                print("Randoms should be a pair of ints setting the size and max for random")
+                randoms_size=50
+                randoms_max=20
+                print("Defaulting to randoms_size = {}, and randoms_max = {}".format(
+                    randoms_size,randoms_max))
+            rands= np.random.randint(1,high=randoms_max,size=2*randoms_size)
+            rands.shape= [randoms_size,2]
+            self.array = np.unique(np.concatenate((self.array,rands)),axis=0)
+
         # We still don't have any really stubborn beta priors in here.
         # If we want some priors which converge really slowly, set stubborns=True
         if stubborns != False:
@@ -139,21 +155,6 @@ class BetaPrior(BetaArray):
                 stub_list.append(self.array*x)
                 stub_array = np.concatenate(stub_list)
             self.array = np.unique(stub_array,axis=0)
-        if randoms != False:
-            try:
-                randoms_size = randoms[0]
-                randoms_max = randoms[1]
-            except: TypeError as err:
-                print("Error creating randoms")
-                print(err)
-                print("Randoms should be a pair of ints setting the size and max for random")
-                randoms_size=50
-                randoms_max=50
-                print("Defaulting to randoms_size = {}, and randoms_max = {}".format(
-                    randoms_size,randoms_max))
-            pass
-
-
             
 
 
@@ -374,8 +375,6 @@ class LearningSequence:
             y = ts_red(i)
             axs.plot(x,y,color='r',linewidth=1,marker=".")
         axs.set_xticks(np.arange(0,len(self.evidence_words)))
-        axs.text(1.05,0.5,"One", transform=axs.transAxes)
-        print(axs.get_xlim())
         axs.set_xticklabels(self.evidence_words,rotation="vertical")
         #    axs.margins(0.2)
         plt.subplots_adjust(bottom=0.15)
@@ -428,7 +427,6 @@ class LearningSequence:
         # axs[1].ylabel("Two")
         plt.subplots_adjust(hspace=0.2)
         #plt.savefig("commutativity.pdf")
-        print("Figure saved")
 
     def two_graph_iter_iter_fast(self):
         self._two_graphs(
@@ -440,8 +438,6 @@ class LearningSequence:
             ts_one,ts_two = self.ts_iter_alpha_fast, self.ts_iter_alpha_fast_perm
         else:
             ts_one, ts_two = self.ts_iter_alpha,self.ts_iter_alpha_perm
-        print(ts_one)
-        print(ts_two)
         self._two_graphs(
             ts_one,ts_two,
             top_label="Original\n evidence series",
@@ -473,7 +469,6 @@ class LearningSequence:
         axs.legend(loc='best')
 
 # TODO:
-# random prior
 # multiple alpha values
 # IDM? (throw out all priors with high t value?)
         
@@ -485,7 +480,7 @@ def test(fast=True):
 
     else:
         return LearningSequence(
-            BetaPrior(4), EvidenceStream(0.3,8,8),iter_alpha = 0.5,permuted_evidence=True)
+            BetaPrior(4,randoms=[50,50]), EvidenceStream(0.3,8,8),iter_alpha = 0.5,permuted_evidence=True)
 
 def graph_test():
     foo = test()
