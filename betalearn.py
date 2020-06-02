@@ -297,37 +297,42 @@ class LearningSequence:
 
 
     # Helper function to create time series of probs of heads
-    def _time_series_heads(self,arr,idx):
+    def _ts_heads(self,arr,idx):
         ts = []
         for a in arr:
             ts.append(a.prob_of_heads[idx])
         return np.array(ts)
 
-    def time_series_GC(self,idx):
-        return self._time_series_heads(self.GC_list,idx)
+    def ts_GC(self,idx):
+        return self._ts_heads(self.GC_list,idx)
     
-    def time_series_iter_alpha(self,idx):
+    def ts_iter_alpha(self,idx):
         assert self.iter_alpha != 0, "Error: no iter_alpha array"
-        return self._time_series_heads(self.iter_alpha_list,idx)
+        return self._ts_heads(self.iter_alpha_list,idx)
 
-    def time_series_iter_alpha_fast(self,idx):
+    def ts_iter_alpha_fast(self,idx):
         assert self.iter_alpha_fast != 0, "Error: no iter_alpha_fast array"
-        return self._time_series_heads(self.iter_alpha_fast_list,idx)
+        return self._ts_heads(self.iter_alpha_fast_list,idx)
 
-    def time_series_iter_alpha_perm(self,idx):
-        return self._time_series_heads(self.iter_alpha_perm_list,idx)
+    def ts_iter_alpha_perm(self,idx):
+        return self._ts_heads(self.iter_alpha_perm_list,idx)
 
-    def time_series_iter_alpha_fast_perm(self,idx):
-        return self._time_series_heads(self.iter_alpha_fast_perm_list,idx)
+    def ts_iter_alpha_fast_perm(self,idx):
+        return self._ts_heads(self.iter_alpha_fast_perm_list,idx)
 
-    def time_series_totev_alpha(self,idx):
+    def ts_totev_alpha(self,idx):
         assert self.totev_alpha != 0, "Error: no totev_alpha array"
-        return self._time_series_heads(self.totev_alpha_list,idx)
+        return self._ts_heads(self.totev_alpha_list,idx)
 
-    def time_series_totev_alpha_fast(self,idx):
+    def ts_totev_alpha_fast(self,idx):
         assert self.totev_alpha_fast != 0, "Error: no totev_alpha_fast array"
-        return self._time_series_heads(self.totev_alpha_fast_list,idx)
+        return self._ts_heads(self.totev_alpha_fast_list,idx)
 
+    # Helper function for spread of heads values
+    # def _spread_heads(self,arr,idx):
+    #     spread = arr.
+
+    # def 
 
     # Graphing as a method of LearningSequence
     def _red_grey(self,ts_red,ts_grey):
@@ -348,16 +353,16 @@ class LearningSequence:
         plt.subplots_adjust(bottom=0.15)
 
     def graph_iter_v_GC(self):
-        self._red_grey(self.time_series_iter_alpha,self.time_series_GC)
+        self._red_grey(self.ts_iter_alpha,self.ts_GC)
 
     def graph_iter_fast_v_GC(self):
-        self._red_grey(self.time_series_iter_alpha_fast,self.time_series_GC)
+        self._red_grey(self.ts_iter_alpha_fast,self.ts_GC)
 
     def graph_totev_v_GC(self):
-        self._red_grey(self.time_series_totev_alpha,self.time_series_GC)
+        self._red_grey(self.ts_totev_alpha,self.ts_GC)
 
     def graph_iter_v_totev(self):
-        self._red_grey(self.time_series_totev_alpha,self.time_series_iter_alpha)
+        self._red_grey(self.ts_totev_alpha,self.ts_iter_alpha)
 
     # Two graphs
     # NOTE: permuted label appears on the bottom, call the function accordingly
@@ -399,14 +404,14 @@ class LearningSequence:
 
     def two_graph_iter_iter_fast(self):
         self._two_graphs(
-            self.time_series_iter_alpha,self.time_series_iter_alpha_fast,
+            self.ts_iter_alpha,self.ts_iter_alpha_fast,
             top_label="Iterative\n alpha cut",bottom_label="Fast iterative\n alpha cut")
 
     def commutativity(self,fast=False):
         if fast:
-            ts_one,ts_two = self.time_series_iter_alpha_fast, self.time_series_iter_alpha_fast_perm
+            ts_one,ts_two = self.ts_iter_alpha_fast, self.ts_iter_alpha_fast_perm
         else:
-            ts_one, ts_two = self.time_series_iter_alpha,self.time_series_iter_alpha_perm
+            ts_one, ts_two = self.ts_iter_alpha,self.ts_iter_alpha_perm
         print(ts_one)
         print(ts_two)
         self._two_graphs(
@@ -433,7 +438,7 @@ def test(fast=True):
             BetaPrior(4), EvidenceStream(0.3,8,8),iter_alpha = 0.5,permuted_evidence=True)
 
 def graph_test():
-    test().commutativity(fast=False)
+    test().commutativity(fast=True)
     plt.show()
     
     
