@@ -20,6 +20,7 @@ class BetaArray:
         self.array_size = self.array.shape[0]
         self.prob_of_heads=self.array[:,0]/np.sum(self.array,axis=1)
         self.masker= False
+        self.spread = np.nanmax(self.prob_of_heads) - np.nanmin(self.prob_of_heads)
 
     def __getitem__(self,key):
         return self.array[key]
@@ -140,6 +141,7 @@ class BetaPrior(BetaArray):
 
         self.array_size = self.array.shape[0]
         self.prob_of_heads=self.array[:,0]/np.sum(self.array,axis=1)
+        self.spread = np.nanmax(self.prob_of_heads) - np.nanmin(self.prob_of_heads)
             
 
 
@@ -224,10 +226,13 @@ class LearningSequence:
         self.evidence_length = evidence_stream.evidence_length
         self.evidence_words = evidence_stream.evidence_words
         self.evidence_words_permuted = evidence_stream.evidence_words_permuted
+        # This empty list gets populated as the spread ts get created
+        self.existing_spread_ts = []
         # Generate GC update
         self.GC_list = [prior]
         for evidence in evidence_stream:
             self.GC_list.append(self.GC_list[-1].GC_update(evidence))
+        self.GC_spread_ts = self._ts_spread(self.GC_list, name="GC")
 
         if iter_alpha:
             self.iter_alpha_list  = self._gen_array_list(
@@ -235,25 +240,27 @@ class LearningSequence:
             if permuted_evidence:
                 self.iter_alpha_perm_list = self._gen_array_list(
                     self.evidence_stream_permuted, iter_alpha, self.prior, iterative=True, fast=False)
+            self.iter_alpha_spread_ts = self._ts_spread(self.iter_alpha_list,name="Iterative")
 
         if iter_alpha_fast:
             self.iter_alpha_fast_list = self._gen_array_list(
                 self.evidence_stream, iter_alpha_fast, self.prior, iterative=True, fast=True)
-            print(self.evidence_stream.evidence)
             if permuted_evidence_fast:
                 self.iter_alpha_fast_perm_list = self._gen_array_list(
                     self.evidence_stream_permuted, iter_alpha_fast,
                     self.prior, iterative=True, fast=True)
-            print(self.evidence_stream_permuted)
+            self.iter_alpha_fast_spread_ts = self._ts_spread(self.iter_alpha_fast_list,name = "Iterative  (fast)")
         # Permuted evidence for iter only, since totev is obviously commutative.
 
         if totev_alpha:
             self.totev_alpha_list = self._gen_array_list(
                 self.evidence_stream, totev_alpha, self.prior, iterative=False, fast=False)
+            self.totev_alpha_spread_ts = self._ts_spread(self.totev_alpha_list,name = "Total evidence")
 
         if totev_alpha_fast:
             self.totev_alpha_fast_list = self._gen_array_list(
                 self.evidence_stream, totev_alpha_fast, self.prior, iterative=False, fast=True)
+            self.totev_alpha_fast_spread_ts = self._ts_spread(self.totev_alpha_fast_list,name= "Total evidence (fast)")
 
 
 
@@ -328,11 +335,14 @@ class LearningSequence:
         assert self.totev_alpha_fast != 0, "Error: no totev_alpha_fast array"
         return self._ts_heads(self.totev_alpha_fast_list,idx)
 
-    # Helper function for spread of heads values
-    # def _spread_heads(self,arr,idx):
-    #     spread = arr.
+    def _ts_spread(self,array_list,name=""):
+        spread_list = []
+        for arr in array_list:
+            spread_list.append(arr.spread)
+        obj = np.array(spread_list)
+        self.existing_spread_ts.append([name,obj])
+        return obj
 
-    # def 
 
     # Graphing as a method of LearningSequence
     def _red_grey(self,ts_red,ts_grey):
@@ -420,8 +430,31 @@ class LearningSequence:
             bottom_label = "Permuted\n evidence series",
             label_permuted=True)
 
+    def spread_graph(self,spread_ts):
+        fig,axs=plt.subplots()
+        # +1 here for the prior
+        x = np.arange(len(spread_ts))
+        y = spread_ts
+        axs.plot(x,y,color='r',linewidth=1,marker=".")
+        axs.set_xticks(np.arange(0,len(self.evidence_words)))
+        axs.set_xticklabels(self.evidence_words,rotation="vertical")
+        #    axs.margins(0.2)
+
+    # root_n currently doesn't do anything.
+    # The plan is that it will fit a curve of shape 1/sqrt n
+    def all_spread(self,root_n=False):
+        fig,axs = plt.subplots()
+        x = np.arange(len(self.existing_spread_ts[0][1]))
+        for ts in self.existing_spread_ts:
+            y = ts[1]
+            axs.plot(x,y,linewidth=1,label =ts[0])
+        z = 1/np.sqrt(x)
+        axs.plot(x,z,linewidth = 0.5,label = r"n^-2")
+        axs.set_xticks(np.arange(0,len(self.evidence_words)))
+        axs.set_xticklabels(self.evidence_words,rotation="vertical")
+        axs.legend(loc='best')
+
 # TODO:
-# measure P^(H) - P_(H) as a function of "time"
 # random prior
 # multiple alpha values
 # docstrings
@@ -438,7 +471,8 @@ def test(fast=True):
             BetaPrior(4), EvidenceStream(0.3,8,8),iter_alpha = 0.5,permuted_evidence=True)
 
 def graph_test():
-    test().commutativity(fast=True)
+    foo = test()
+    foo.spread_graph(foo.iter_alpha_fast_spread_ts)
     plt.show()
     
     
