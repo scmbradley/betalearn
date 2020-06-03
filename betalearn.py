@@ -80,7 +80,7 @@ class BetaArray:
 
     def alpha_cut(self,evidence,alpha):
         updated_array = self.GC_update(evidence)
-        probs = updated_array.prob_of_evidence(evidence)
+        probs = self.prob_of_evidence(evidence)
         bools = probs >= alpha*np.nanmax(probs)
         updated_array.mask_array(bools)
         return updated_array
@@ -88,7 +88,7 @@ class BetaArray:
     # Likewise, this should involve a wrapper.
     def alpha_cut_fast(self,evidence,alpha):
         updated_array = self.GC_update(evidence)
-        probs = updated_array.prob_of_evidence_fast(evidence)
+        probs = self.prob_of_evidence_fast(evidence)
         bools = probs >= alpha*np.nanmax(probs)
         updated_array.mask_array(bools)
         return updated_array
@@ -102,6 +102,7 @@ class BetaPrior(BetaArray):
     stubborns: adds additional distributions that are slower to converge.
     should be set to a pair of ints, for the max and the step.
     fillers: boolean that fills in the (0,1/size) and (1/1-size,1) ranges.
+    randoms: pair of values setting the size and maximum for random distributions
     """
     def __init__(self,size,
                  stubborns=False, fillers=False,
@@ -281,7 +282,8 @@ class LearningSequence:
                 self.evidence_stream, totev_alpha_fast, self.prior, iterative=False, fast=True)
             self.totev_alpha_fast_spread_ts = self._ts_spread(self.totev_alpha_fast_list,name= "Total evidence (fast)")
 
-
+        # make a wrapper to allow iter discrepancy, and max rather than mean disc.
+        
 
     def _gen_array_list(self, evidence_stream, alpha, prior, fast=False, iterative=False):
         """ 
@@ -366,6 +368,7 @@ class LearningSequence:
     # Graphing as a method of LearningSequence
     def _red_grey(self,ts_red,ts_grey):
         fig,axs=plt.subplots()
+        fig.set_tight_layout(True)
         # +1 here for the prior
         x = np.arange(0,self.evidence_length+1)
         for i in np.arange(self.prior.array_size):
@@ -446,6 +449,7 @@ class LearningSequence:
 
     def spread_graph(self,spread_ts):
         fig,axs=plt.subplots()
+        fig.set_tight_layout(True)
         # +1 here for the prior
         x = np.arange(len(spread_ts))
         y = spread_ts
@@ -458,19 +462,36 @@ class LearningSequence:
     # The plan is that it will fit a curve of shape 1/sqrt n
     def all_spread(self,root_n=False):
         fig,axs = plt.subplots()
+        fig.set_tight_layout(True)
         x = np.arange(len(self.existing_spread_ts[0][1]))
         for ts in self.existing_spread_ts:
             y = ts[1]
             axs.plot(x,y,linewidth=1,label =ts[0])
-        z = 1/np.sqrt(x)
-        axs.plot(x,z,linewidth = 0.5,label = r"n^-2")
+        if root_n:
+            z = 1/np.sqrt(x)
+            axs.plot(x,z,linewidth = 0.5,label = r"n^-2")
         axs.set_xticks(np.arange(0,len(self.evidence_words)))
         axs.set_xticklabels(self.evidence_words,rotation="vertical")
         axs.legend(loc='best')
 
+    # currently the iter_ts switch does nothing.
+    # in the future, it will allow iterative alpha cut discrepancy graphs too
+    def discrepancy(self,iter_ts=False):
+        fig,axs = plt.subplots()
+        fig.set_tight_layout(True)
+        # fig.subplots_adjust(right=0.8)
+        x = np.arange(0,self.evidence_length+1)
+        y = np.array(self.totev_disc)
+        plt.plot(x,y,linewidth=1)
+        
+
 # TODO:
 # multiple alpha values
 # IDM? (throw out all priors with high t value?)
+# Discrepancy of fast methods : wrapper
+# .. : graph
+# .. : log plots
+# Time output
         
 
 def test(fast=True):
@@ -480,7 +501,7 @@ def test(fast=True):
 
     else:
         return LearningSequence(
-            BetaPrior(4,randoms=[50,50]), EvidenceStream(0.3,8,8),iter_alpha = 0.5,permuted_evidence=True)
+            BetaPrior(4,randoms=[50,20]), EvidenceStream(0.3,8,8),iter_alpha = 0.5,permuted_evidence=True)
 
 def graph_test():
     foo = test()
