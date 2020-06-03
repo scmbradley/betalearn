@@ -20,17 +20,20 @@ class BetaArray:
         self.array_size = self.array.shape[0]
         self.prob_of_heads=self.array[:,0]/np.sum(self.array,axis=1)
         self.masker= False
-        self.spread = np.nanmax(self.prob_of_heads) - np.nanmin(self.prob_of_heads)
+        self._set_spread()
 
     def __getitem__(self,key):
         return self.array[key]
 
-
+    def _set_spread(self):
+        self.spread = np.nanmax(self.prob_of_heads) - np.nanmin(self.prob_of_heads)
+        
     # Returns a masked array of params
     def mask_array(self,bools):
         masker = np.transpose(np.concatenate((bools,bools)).reshape(2,self.array_size))
         self.array = np.where(masker,self.array,np.nan)
         self.prob_of_heads= np.where(bools,self.prob_of_heads,np.nan)
+        self._set_spread()
     
     # Helper functions for prob_of_evidence
     # This one returns the pdf at theta of a a distribution (a pair of parameters)
@@ -83,7 +86,7 @@ class BetaArray:
         probs = self.prob_of_evidence(evidence)
         bools = probs >= alpha*np.nanmax(probs)
         updated_array.mask_array(bools)
-        return updated_array
+        return updated_array, probs
 
     # Likewise, this should involve a wrapper.
     def alpha_cut_fast(self,evidence,alpha):
@@ -91,7 +94,7 @@ class BetaArray:
         probs = self.prob_of_evidence_fast(evidence)
         bools = probs >= alpha*np.nanmax(probs)
         updated_array.mask_array(bools)
-        return updated_array
+        return updated_array , probs
 
 # The BetaPrior is a subclass of the BetaArray: the one you start with
 class BetaPrior(BetaArray):
@@ -156,12 +159,10 @@ class BetaPrior(BetaArray):
                 stub_list.append(self.array*x)
                 stub_array = np.concatenate(stub_list)
             self.array = np.unique(stub_array,axis=0)
-            
-
 
         self.array_size = self.array.shape[0]
         self.prob_of_heads=self.array[:,0]/np.sum(self.array,axis=1)
-        self.spread = np.nanmax(self.prob_of_heads) - np.nanmin(self.prob_of_heads)
+        self._set_spread()
             
 
 
@@ -255,33 +256,46 @@ class LearningSequence:
         self.GC_spread_ts = self._ts_spread(self.GC_list, name="GC")
 
         if iter_alpha:
-            self.iter_alpha_list  = self._gen_array_list(
+            self.iter_alpha_list, self.iter_alpha_lik_list = self._gen_array_list(
                 self.evidence_stream, iter_alpha, self.prior, iterative=True,fast=False)
             if permuted_evidence:
-                self.iter_alpha_perm_list = self._gen_array_list(
+                self.iter_alpha_perm_list, self.iter_alpha_perm_lik_list = self._gen_array_list(
                     self.evidence_stream_permuted, iter_alpha, self.prior, iterative=True, fast=False)
             self.iter_alpha_spread_ts = self._ts_spread(self.iter_alpha_list,name="Iterative")
 
         if iter_alpha_fast:
-            self.iter_alpha_fast_list = self._gen_array_list(
+            self.iter_alpha_fast_list, self.iter_alpha_fast_lik_list = self._gen_array_list(
                 self.evidence_stream, iter_alpha_fast, self.prior, iterative=True, fast=True)
             if permuted_evidence_fast:
-                self.iter_alpha_fast_perm_list = self._gen_array_list(
+                self.iter_alpha_fast_perm_list, self.iter_alpha_fast_perm_lik_list = self._gen_array_list(
                     self.evidence_stream_permuted, iter_alpha_fast,
                     self.prior, iterative=True, fast=True)
             self.iter_alpha_fast_spread_ts = self._ts_spread(self.iter_alpha_fast_list,name = "Iterative  (fast)")
+
+        try:
+            disc = np.abs(self.iter_alpha_lik_list - self.iter_alpha_fast_lik_list)
+            self.iter_alpha_disc_list = np.nanmean(disc, axis=1)
+        except AttributeError as err:
+            print("Couldn't generate iter discrepancy array: missing information")
+            print(err)
         # Permuted evidence for iter only, since totev is obviously commutative.
 
         if totev_alpha:
-            self.totev_alpha_list = self._gen_array_list(
+            self.totev_alpha_list, self.totev_alpha_lik_list = self._gen_array_list(
                 self.evidence_stream, totev_alpha, self.prior, iterative=False, fast=False)
             self.totev_alpha_spread_ts = self._ts_spread(self.totev_alpha_list,name = "Total evidence")
 
         if totev_alpha_fast:
-            self.totev_alpha_fast_list = self._gen_array_list(
+            self.totev_alpha_fast_list, self.totev_alpha_fast_lik_list = self._gen_array_list(
                 self.evidence_stream, totev_alpha_fast, self.prior, iterative=False, fast=True)
             self.totev_alpha_fast_spread_ts = self._ts_spread(self.totev_alpha_fast_list,name= "Total evidence (fast)")
-
+            
+        try:
+            disc = np.abs(self.totev_alpha_lik_list - self.totev_alpha_fast_lik_list)
+            self.totev_alpha_disc_list = np.nanmean(disc, axis=1)
+        except AttributeError as err:
+            print("Couldn't generate totev discrepancy array: missing information")
+            print(err)
         # make a wrapper to allow iter discrepancy, and max rather than mean disc.
         
 
@@ -303,12 +317,13 @@ class LearningSequence:
             stream = evidence_stream.cumulative
             method = "total evidence alpha cut, alpha = {}".format(alpha)
         length = self.evidence_length
-        the_list = [prior]
+        arr_list = [prior]
+        lik_list = []
         if fast:
-            update_fn = lambda x: the_list[x].alpha_cut_fast
+            update_fn = lambda x: arr_list[x].alpha_cut_fast
             fast_word = "(fast)"
         else:
-            update_fn = lambda x: the_list[x].alpha_cut
+            update_fn = lambda x: arr_list[x].alpha_cut
             fast_word = ""
         round=1
         # Currently doesn't report whether it's using permuted evidence or not.
@@ -320,8 +335,10 @@ class LearningSequence:
             # OK. Look, there's a little bit of currying going on in this next line.
             # I needed to do it this way because when I set update_fn
             # above, it doesn't know yet what idx will be.
-            the_list.append(update_fn(idx)(evidence,alpha))
-        return the_list
+            arr, lik = update_fn(idx)(evidence,alpha)
+            lik_list.append(lik)
+            arr_list.append(arr)
+        return arr_list , np.array(lik_list)
 
 
     # Helper function to create time series of probs of heads
@@ -391,6 +408,9 @@ class LearningSequence:
     def graph_totev_v_GC(self):
         self._red_grey(self.ts_totev_alpha,self.ts_GC)
 
+    def graph_totev_fast_v_GC(self):
+        self._red_grey(self.ts_totev_alpha_fast,self.ts_GC)
+
     def graph_iter_v_totev(self):
         self._red_grey(self.ts_totev_alpha,self.ts_iter_alpha)
 
@@ -435,6 +455,11 @@ class LearningSequence:
         self._two_graphs(
             self.ts_iter_alpha,self.ts_iter_alpha_fast,
             top_label="Iterative\n alpha cut",bottom_label="Fast iterative\n alpha cut")
+        
+    def two_graph_totev_totev_fast(self):
+        self._two_graphs(
+            self.ts_totev_alpha,self.ts_totev_alpha_fast,
+            top_label="Total evidence\n alpha cut",bottom_label="Fast total evidence\n alpha cut")
 
     def commutativity(self,fast=False):
         if fast:
@@ -450,9 +475,10 @@ class LearningSequence:
     def spread_graph(self,spread_ts):
         fig,axs=plt.subplots()
         fig.set_tight_layout(True)
-        # +1 here for the prior
         x = np.arange(len(spread_ts))
         y = spread_ts
+        z = self.GC_spread_ts
+        axs.plot(x,z,color='b',linewidth=2)
         axs.plot(x,y,color='r',linewidth=1,marker=".")
         axs.set_xticks(np.arange(0,len(self.evidence_words)))
         axs.set_xticklabels(self.evidence_words,rotation="vertical")
@@ -480,28 +506,32 @@ class LearningSequence:
         fig,axs = plt.subplots()
         fig.set_tight_layout(True)
         # fig.subplots_adjust(right=0.8)
-        x = np.arange(0,self.evidence_length+1)
-        y = np.array(self.totev_disc)
+        x = np.arange(0,self.evidence_length)
+        y = self.totev_alpha_disc_list
         plt.plot(x,y,linewidth=1)
         
 
-# TODO:
+# todo:
 # multiple alpha values
 # IDM? (throw out all priors with high t value?)
-# Discrepancy of fast methods : wrapper
-# .. : graph
-# .. : log plots
+# Discrepancy : log plots
 # Time output
         
+def spread_test():
+    foo = LearningSequence(BetaPrior(8), EvidenceStream(0.3,8,8),
+                           totev_alpha=0.5, totev_alpha_fast=0.5)
+    # foo.all_spread(root_n=False)
+    # foo.spread_graph(foo.totev_alpha_fast_spread_ts)
+    # plt.show()
 
 def test(fast=True):
     if fast:
         return LearningSequence(
-            BetaPrior(4), EvidenceStream(0.3,8,8),iter_alpha_fast = 0.5,permuted_evidence_fast=True)
+            BetaPrior(4), EvidenceStream(0.3,8,8),totev_alpha_fast = 0.5)
 
     else:
         return LearningSequence(
-            BetaPrior(4,randoms=[50,20]), EvidenceStream(0.3,8,8),iter_alpha = 0.5,permuted_evidence=True)
+            BetaPrior(4,randoms=[50,20]), EvidenceStream(0.3,8,8),iter_alpha = 0.5,  iter_alpha_fast=0.5,permuted_evidence=True)
 
 def graph_test():
     foo = test()
