@@ -20,7 +20,7 @@ ls = bl.LearningSequence(
     totev_alpha_fast=0.1)
 
 ls.two_graph_totev_totev_fast()
-plt.savefig("two_graph_fast.pdf")
+plt.savefig("two-graph_fast.pdf")
 print("two graph discrepancy fast saved")
 plt.clf()
 
@@ -30,7 +30,7 @@ print("discrepancy graph saved")
 plt.clf()
 
 ls.plot_dists(7)
-plt.savefig("plots_dists.pdf")
+plt.savefig("plots-dists.pdf")
 print("plot distributions saved")
 plt.clf()
 
@@ -55,12 +55,12 @@ print("spread graph saved")
 plt.clf()
 
 bigg.graph_iter_fast_v_GC()
-plt.savefig("iter_v_GC.pdf")
+plt.savefig("iter-v-GC.pdf")
 print("iter v GC saved")
 plt.clf()
 
 bigg.graph_totev_fast_v_GC()
-plt.savefig("totev_v_GC.pdf")
+plt.savefig("totev-v-GC.pdf")
 print("totev v GC saved")
 plt.clf()
     
