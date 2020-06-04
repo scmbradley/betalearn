@@ -509,13 +509,30 @@ class LearningSequence:
         x = np.arange(0,self.evidence_length)
         y = self.totev_alpha_disc_list
         plt.plot(x,y,linewidth=1)
+
+    # likewise, currently vestigial iter_ts switch
+    def plot_dists(self,idx, iter_ts = False,stop = 8):
+        x = np.linspace(0,1,128)
+        fig,axs = plt.subplots()
+        i = 0
+        for arr in self.GC_list:
+            a,b = arr.array[idx]
+            axs.plot(x,stats.beta.pdf(x,a,b),label=arr.array[idx],lw=2)
+            i+=1
+            if i >= stop:
+                break
+        axs.axes.get_yaxis().set_visible(False)
+        for spine in ["left", "top", "right"]:
+            axs.spines[spine].set_visible(False)
+        axs.xaxis.set_ticks_position('bottom')
+        axs.legend(loc='best')
+
         
 
 # todo:
 # multiple alpha values
 # IDM? (throw out all priors with high t value?)
 # Discrepancy : log plots
-# Time output
         
 def spread_test():
     foo = LearningSequence(BetaPrior(8), EvidenceStream(0.3,8,8),
@@ -527,7 +544,7 @@ def spread_test():
 def test(fast=True):
     if fast:
         return LearningSequence(
-            BetaPrior(4), EvidenceStream(0.3,8,8),totev_alpha_fast = 0.5)
+            BetaPrior(4), EvidenceStream(0.3,16,8),totev_alpha_fast = 0.5)
 
     else:
         return LearningSequence(

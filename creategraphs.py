@@ -29,6 +29,10 @@ plt.savefig("discrepancy.pdf")
 print("discrepancy graph saved")
 plt.clf()
 
+ls.plot_dists(7)
+plt.savefig("plots_dists.pdf")
+print("plot distributions saved")
+plt.clf()
 
 # Then we move on to a longer and larger simulation using only the fast simulations.
 
