@@ -20,7 +20,7 @@ ls = bl.LearningSequence(
     totev_alpha_fast=0.1)
 
 ls.two_graph_totev_totev_fast()
-plt.savefig("two-graph_fast.pdf")
+plt.savefig("two-graph-fast.pdf")
 print("two graph discrepancy fast saved")
 plt.clf()
 
@@ -39,7 +39,7 @@ plt.clf()
 print("Running bigger faster simulation")
 bigg = bl.LearningSequence(
     bl.BetaPrior(8,fillers=True,stubborns=[20,5]),
-    bl.EvidenceStream(0.3,32,8),
+    bl.EvidenceStream(0.3,32,4),
     totev_alpha_fast= 0.01,
     iter_alpha_fast = 0.01,
     permuted_evidence_fast= True)
