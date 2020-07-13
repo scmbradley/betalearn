@@ -71,16 +71,19 @@ class BetaArray:
     def _likelihood_test(self,evidence, param):
         heads, tails = evidence
         size= heads+tails
-        a,b = param
+        a,b = param[0], param[1]
         val = stats.betabinom.pmf(heads, size, a,b)
+        return val
 
     def prob_of_evidence(self,evidence):
         return self._prob_of_evidence(evidence,self._likelihood_slow, self.array)
 
     def prob_of_evidence_fast(self,evidence):
         return self._prob_of_evidence(evidence, self._likelihood_fast, self.prob_of_heads)
-    
 
+    def prob_of_evidence_test(self,evidence):
+         return self._prob_of_evidence(evidence, self._likelihood_test,self.array)
+ 
     # GC update works by simply adding the params from the evidence to the array
     def GC_update(self,evidence):
         assert isinstance(evidence, np.ndarray), "Evidence object is not a numpy ndarray"
@@ -101,6 +104,21 @@ class BetaArray:
         bools = probs >= alpha*np.nanmax(probs)
         updated_array.mask_array(bools)
         return updated_array , probs
+
+    def alpha_cut_test(self,evidence,alpha):
+        updated_array = self.GC_update(evidence)
+        probs = self.prob_of_evidence_test(evidence)
+        bools = probs >= alpha*np.nanmax(probs)
+        updated_array.mask_array(bools)
+        return updated_array , probs
+
+    def run_test(self,evidence,alpha):
+        arr1, pr1 = self.alpha_cut(evidence,alpha)
+        arr2, pr2 = self.alpha_cut_test(evidence,alpha)
+        return pr1-pr2
+
+    ## The test works. betabinom essentially gives the same result as integrating.
+    ## so now to drop it in and see if it's faster.
 
 # The BetaPrior is a subclass of the BetaArray: the one you start with
 class BetaPrior(BetaArray):
