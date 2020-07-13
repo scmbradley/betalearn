@@ -68,6 +68,12 @@ class BetaArray:
         val = stats.binom.pmf(heads,size,prob)
         return val
 
+    def _likelihood_test(self,evidence, param):
+        heads, tails = evidence
+        size= heads+tails
+        a,b = param
+        val = stats.betabinom.pmf(heads, size, a,b)
+
     def prob_of_evidence(self,evidence):
         return self._prob_of_evidence(evidence,self._likelihood_slow, self.array)
 
