@@ -20,17 +20,17 @@ ls = bl.LearningSequence(
     totev_alpha_fast=0.1)
 
 ls.two_graph_totev_totev_fast()
-plt.savefig("two-graph-fast.pdf")
+plt.savefig("two-graph-fast.png")
 print("two graph discrepancy fast saved")
 plt.clf()
 
 ls.discrepancy()
-plt.savefig("discrepancy.pdf")
+plt.savefig("discrepancy.png")
 print("discrepancy graph saved")
 plt.clf()
 
 ls.plot_dists(7)
-plt.savefig("plots-dists.pdf")
+plt.savefig("plots-dists.png")
 print("plot distributions saved")
 plt.clf()
 
@@ -45,22 +45,22 @@ bigg = bl.LearningSequence(
     permuted_evidence_fast= True)
 
 bigg.commutativity(fast=True)
-plt.savefig("commutativity.pdf")
+plt.savefig("commutativity.png")
 print("commutativity graph saved")
 plt.clf()
 
 bigg.all_spread(root_n=True)
-plt.savefig("spread.pdf")
+plt.savefig("spread.png")
 print("spread graph saved")
 plt.clf()
 
 bigg.graph_iter_fast_v_GC()
-plt.savefig("iter-v-GC.pdf")
+plt.savefig("iter-v-GC.png")
 print("iter v GC saved")
 plt.clf()
 
 bigg.graph_totev_fast_v_GC()
-plt.savefig("totev-v-GC.pdf")
+plt.savefig("totev-v-GC.png")
 print("totev v GC saved")
 plt.clf()
     
@@ -68,21 +68,21 @@ duration = tmr() - start
 print("time elapsed in seconds:", duration)
 
 # ls.graph_iter_v_GC()
-# plt.savefig("alpha_v_gc.pdf")
+# plt.savefig("alpha_v_gc.png")
 # print("iter_v_GC saved")
 # plt.clf()
 
 # ls.graph_iter_v_totev()
-# plt.savefig("iter_totev.pdf")
+# plt.savefig("iter_totev.png")
 # print("iter_v_totev saved")
 # plt.clf()
 
 # ls.commutativity(fast=False)
-# plt.savefig("commutativity.pdf")
+# plt.savefig("commutativity.png")
 # print("commutativity saved")
 # plt.clf()
 
 # ls.all_spread(root_n = True)
-# plt.savefig("all_spread.pdf")
+# plt.savefig("all_spread.png")
 # print("all_spread saved")
 # plt.clf()
