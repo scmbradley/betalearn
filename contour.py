@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 def f(x,y,h,n):
     return stats.betabinom.pmf(h,n,y,x)
 
-maxmu = 30
+maxmu = 50
 steps= 50
 
 # H = [1,2,1]
@@ -21,6 +21,8 @@ colrs = 30
 
 fig,axs = plt.subplots(2,len(H))
 
+mask = np.zeros((maxmu,maxmu),dtype=bool)
+
 for i in range(len(axs[0,:])):
     h = H[i]
     t = T[i]
@@ -30,8 +32,20 @@ for i in range(len(axs[0,:])):
     mu = np.linspace(1+ch,maxmu+ch,steps)
     nu = np.linspace(1+ct,maxmu+ct,steps)
     X,Y = np.meshgrid(mu,nu)
+    
     z= f(X,Y,h,n)
-    Z = z/np.max(z)
+    # Z = z/np.max(z)
+    Z = np.ma.array(z/np.max(z))
+    if i >0:
+        h_old = H[i-1]
+        t_old = T[i-1]
+        n_old = h_old+t_old
+        z_old = f(X,Y,h_old,n_old)
+        Z_old = z_old/np.max(z_old)
+        new_mask = Z_old < 0.1
+        mask = mask | new_mask
+        Z.mask = mask
+    
     l = mu*(h/t)
     true = mu*(4/6)
     ctp = axs[0,i].contourf(X,Y,Z,colrs,cmap='RdGy')
@@ -69,3 +83,4 @@ axs[1,len(H)-1].yaxis.set_label_position("right")
 plt.tight_layout()
 fig.colorbar(ctp,ax=axs,orientation = 'horizontal')
 plt.savefig("contour.png")
+#plt.show()
