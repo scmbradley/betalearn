@@ -34,7 +34,10 @@ class BetaArray:
         self.array = np.where(masker,self.array,np.nan)
         self.prob_of_heads= np.where(bools,self.prob_of_heads,np.nan)
         self._set_spread()
-    
+    ##############################
+    # All this is now obsolete, because
+    # betabinom is way faster than integrating (duh)
+    ##############################
     # Helper functions for prob_of_evidence
     # This one returns the pdf at theta of a a distribution (a pair of parameters)
     def _pdf_at(self,theta,params):
@@ -62,27 +65,31 @@ class BetaArray:
         val, err = integrate.quad(lambda x: self._prob_evidence_at(x, evidence, param),0,1)
         return val
 
+    ##############################
+    # Even _likelihood_fast is actually no faster, really
+    # But it is still useful to show that the approximation
+    # is reasonable
+    ##############################
+
     def _likelihood_fast(self,evidence,prob):
         heads, tails = evidence
         size = heads+tails
         val = stats.binom.pmf(heads,size,prob)
         return val
 
-    def _likelihood_test(self,evidence, param):
+    def _likelihood(self,evidence, param):
         heads, tails = evidence
         size= heads+tails
-        a,b = param[0], param[1]
+        a,b = param[:,0], param[:,1]
         val = stats.betabinom.pmf(heads, size, a,b)
         return val
 
     def prob_of_evidence(self,evidence):
-        return self._prob_of_evidence(evidence,self._likelihood_slow, self.array)
+        return self._likelihood(evidence,self.array)
 
     def prob_of_evidence_fast(self,evidence):
-        return self._prob_of_evidence(evidence, self._likelihood_fast, self.prob_of_heads)
+        return self._likelihood_fast(evidence, self.prob_of_heads)
 
-    def prob_of_evidence_test(self,evidence):
-         return self._prob_of_evidence(evidence, self._likelihood_test,self.array)
  
     # GC update works by simply adding the params from the evidence to the array
     def GC_update(self,evidence):
@@ -551,6 +558,7 @@ class LearningSequence:
         axs.xaxis.set_ticks_position('bottom')
         axs.legend(loc='best')
 
+    
         
 
 # todo:
