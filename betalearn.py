@@ -447,7 +447,7 @@ class LearningSequence:
 
     # Two graphs
     # NOTE: permuted label appears on the bottom, call the function accordingly
-    def _two_graphs(self,ts_top,ts_bottom,label_permuted=False,top_label="",bottom_label=""):
+    def _two_graphs(self,ts_top,ts_bottom,label_permuted=False,top_label="",bottom_label="",write_ticks=True):
         fig,axs=plt.subplots(2,1)
         fig.set_tight_layout(True)
         # fig.subplots_adjust(right=0.8)
@@ -464,19 +464,27 @@ class LearningSequence:
         for i in np.arange(self.prior.array_size):
             y = ts_bottom(i)
             axs[1].plot(x,y,color='b', linewidth=1,marker=".")
-        axs[0].tick_params(axis='x', labelbottom=False, labeltop=True)
-        axs[0].set_xticks(np.arange(0,len(self.evidence_words)))
-        axs[1].set_xticks(np.arange(0,len(self.evidence_words)))
         
-        if label_permuted:
-            axs[1].set_xticklabels(self.evidence_words_permuted,rotation="vertical")
-        else:
-            axs[1].set_xticklabels(self.evidence_words,rotation="vertical")
+        axs[0].tick_params(axis='x', labelbottom=False, labeltop=True)
 
+        if write_ticks:
+            axs[0].set_xticks(np.arange(0,len(self.evidence_words)))
+            axs[1].set_xticks(np.arange(0,len(self.evidence_words)))
+        
+            if label_permuted:
+                axs[1].set_xticklabels(self.evidence_words_permuted,rotation="vertical")
+            else:
+                axs[1].set_xticklabels(self.evidence_words,rotation="vertical")
+            axs[0].set_xticklabels(self.evidence_words,rotation="vertical")
+        else:
+            axs[0].set_xticks([])
+            axs[1].set_xticks([])
+            print("No ticks")
+            
         axs[0].text(1.05,0.5,top_label, transform=axs[0].transAxes)
         axs[1].text(1.05,0.5,bottom_label,transform=axs[1].transAxes)
 
-        axs[0].set_xticklabels(self.evidence_words,rotation="vertical")
+
         # axs[0].set_title("One",horizontalalignment="right")
         # axs[1].ylabel("Two")
         plt.subplots_adjust(hspace=0.2)
@@ -491,6 +499,13 @@ class LearningSequence:
         self._two_graphs(
             self.ts_totev_alpha,self.ts_totev_alpha_fast,
             top_label="Total evidence\n alpha cut",bottom_label="Fast total evidence\n alpha cut")
+
+    def two_graph_iter_totev(self):
+        self._two_graphs(
+            self.ts_iter_alpha, self.ts_totev_alpha,
+            top_label="Iterative\n alpha cut",
+            bottom_label="Total evidence\n alpha cut",
+            write_ticks=False)
 
     def commutativity(self,fast=False):
         if fast:

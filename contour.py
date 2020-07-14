@@ -8,7 +8,7 @@ def f(x,y,h,n):
     return stats.betabinom.pmf(h,n,y,x)
 
 maxmu = 50
-steps= 50
+steps= 75
 
 # H = [1,2,1]
 # T = [7,6,7]
@@ -21,7 +21,7 @@ colrs = 30
 
 fig,axs = plt.subplots(2,len(H))
 
-mask = np.zeros((maxmu,maxmu),dtype=bool)
+mask = np.zeros((steps,steps),dtype=bool)
 
 for i in range(len(axs[0,:])):
     h = H[i]
@@ -48,7 +48,7 @@ for i in range(len(axs[0,:])):
     
     l = mu*(h/t)
     true = mu*(4/6)
-    ctp = axs[0,i].contourf(X,Y,Z,colrs,cmap='RdGy')
+    ctp = axs[0,i].contourf(X,Y,Z,colrs,cmap='viridis')
     axs[0,i].plot(mu,l)
     axs[0,i].plot(mu,true)
     axs[0,i].set_ylim(bottom=1+ct,top=maxmu+ct)
@@ -69,7 +69,7 @@ for i in range(len(axs[1,:])):
     Z = z/np.max(z)
     l = mu*(h/t)
     true = mu*(4/6)
-    axs[1,i].contourf(X,Y,Z,colrs,cmap='RdGy')
+    axs[1,i].contourf(X,Y,Z,colrs,cmap='viridis')
     axs[1,i].plot(mu,l)
     axs[1,i].plot(mu,true)
     axs[1,i].set_ylim(bottom=1,top=maxmu)
@@ -82,5 +82,5 @@ axs[1,len(H)-1].yaxis.set_label_position("right")
 
 plt.tight_layout()
 fig.colorbar(ctp,ax=axs,orientation = 'horizontal')
-plt.savefig("contour.png")
-#plt.show()
+#plt.savefig("contour.png")
+plt.show()

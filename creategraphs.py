@@ -35,6 +35,7 @@ print("plot distributions saved")
 plt.clf()
 
 # Then we move on to a longer and larger simulation using only the fast simulations.
+# This is now unneccesary because the actual alpha cut update is faster.
 
 print("Running bigger faster simulation")
 bigg = bl.LearningSequence(
@@ -63,6 +64,19 @@ bigg.graph_totev_fast_v_GC()
 plt.savefig("totev-v-GC.png")
 print("totev v GC saved")
 plt.clf()
+
+# Run a high alpha low size simulation with both total evidence and iterative update
+# to illustrate that iter_alpha gets stuck.
+
+ha = bl.LearningSequence(
+    bl.BetaPrior(8,fillers=True,stubborns = [30,6]),
+    bl.EvidenceStream(0.3,64,2),
+    totev_alpha=0.05,
+    iter_alpha=0.05)
+ha.two_graph_iter_totev()
+plt.savefig("iter-v-totev.png")
+print("iter v totev saved")
+plt.close('all')
     
 duration = tmr() - start
 print("time elapsed in seconds:", duration)
