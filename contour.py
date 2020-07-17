@@ -15,8 +15,11 @@ steps= 75
 # H = [4,4,4]
 # T = [4,4,4]
 
-H = [2,5,3]
-T = [6,3,5]
+# H = [2,5,3]
+# T = [6,3,5]
+
+H = [4,10,6]
+T = [12,6,10]
 colrs = 30
 
 fig,axs = plt.subplots(2,len(H))
@@ -82,5 +85,5 @@ axs[1,len(H)-1].yaxis.set_label_position("right")
 
 plt.tight_layout()
 fig.colorbar(ctp,ax=axs,orientation = 'horizontal')
-#plt.savefig("contour.png")
-plt.show()
+plt.savefig("contour.png")
+#plt.show()
