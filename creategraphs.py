@@ -50,7 +50,7 @@ plt.savefig("commutativity.png")
 print("commutativity graph saved")
 plt.clf()
 
-bigg.all_spread(root_n=True)
+bigg.all_spread(root_n=True,ylabel=True)
 plt.savefig("spread.png")
 print("spread graph saved")
 plt.clf()
@@ -76,6 +76,18 @@ ha = bl.LearningSequence(
 ha.two_graph_iter_totev()
 plt.savefig("iter-v-totev.png")
 print("iter v totev saved")
+
+# execfile is a python 2 thing that has been removed.
+# Look into how to do this in p3.
+# For now, just run separately.
+# Eventually, the code in contour.py and altparam.py will be
+# folded into betalearn.py and then they can just be called
+# in here as per.
+
+# execfile('contour.py')
+
+# execfile('altparam.py')
+
 plt.close('all')
     
 duration = tmr() - start
