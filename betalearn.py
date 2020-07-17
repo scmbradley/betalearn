@@ -580,7 +580,8 @@ class LearningSequence:
 # multiple alpha values
 # IDM? (throw out all priors with high t value?)
 # Discrepancy : log plots
-# Use scipy betabinom.
+# Implement contour plots in EvidenceStream
+# Alternative parametrisation BetaPriors (a la IDM)
         
 def spread_test():
     foo = LearningSequence(BetaPrior(8), EvidenceStream(0.3,8,8),
