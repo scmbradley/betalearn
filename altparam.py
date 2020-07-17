@@ -22,6 +22,7 @@ axs.set_title(r"Beta distributions for $\phi = {}$".format(phi))
 for spine in ["left", "top", "right"]:
     axs.spines[spine].set_visible(False)
 axs.xaxis.set_ticks_position('bottom')
+axs.set_xlabel("Chance of heads")
 
 axs.legend(loc="best")
 
@@ -30,8 +31,6 @@ plt.savefig("fix-phi.png")
 
 mu = 0.4
 nu = 1-mu
-
-
 
 phip = np.arange(3,24,3)
 
@@ -44,12 +43,15 @@ axs.set_title(r"Beta distributions for $\mu' = {}, \nu' = {}$".format(mu,nu))
 for spine in ["left", "top", "right"]:
     axs.spines[spine].set_visible(False)
 axs.xaxis.set_ticks_position('bottom')
+axs.set_xlabel("Chance of heads")
 
 axs.legend(loc="best")
 
 plt.savefig("fix-mu.png")
-    
+plt.show()
+
 plt.close('all')
+
 
 
 #plt.show()
