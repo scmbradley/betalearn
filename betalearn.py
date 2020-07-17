@@ -414,7 +414,7 @@ class LearningSequence:
 
 
     # Graphing as a method of LearningSequence
-    def _red_grey(self,ts_red,ts_grey):
+    def _red_grey(self,ts_red,ts_grey,ylabel=False):
         fig,axs=plt.subplots()
         fig.set_tight_layout(True)
         # +1 here for the prior
@@ -427,6 +427,8 @@ class LearningSequence:
             axs.plot(x,y,color='r',linewidth=1,marker=".")
         axs.set_xticks(np.arange(0,len(self.evidence_words)))
         axs.set_xticklabels(self.evidence_words,rotation="vertical")
+        if ylabel:
+            axs.set_ylabel("Probability of heads")
         #    axs.margins(0.2)
         plt.subplots_adjust(bottom=0.15)
 
@@ -437,7 +439,7 @@ class LearningSequence:
         self._red_grey(self.ts_iter_alpha_fast,self.ts_GC)
 
     def graph_totev_v_GC(self):
-        self._red_grey(self.ts_totev_alpha,self.ts_GC)
+        self._red_grey(self.ts_totev_alpha,self.ts_GC,ylabel=True)
 
     def graph_totev_fast_v_GC(self):
         self._red_grey(self.ts_totev_alpha_fast,self.ts_GC)
@@ -479,7 +481,6 @@ class LearningSequence:
         else:
             axs[0].set_xticks([])
             axs[1].set_xticks([])
-            print("No ticks")
             
         axs[0].text(1.05,0.5,top_label, transform=axs[0].transAxes)
         axs[1].text(1.05,0.5,bottom_label,transform=axs[1].transAxes)
@@ -532,7 +533,7 @@ class LearningSequence:
 
     # root_n currently doesn't do anything.
     # The plan is that it will fit a curve of shape 1/sqrt n
-    def all_spread(self,root_n=False):
+    def all_spread(self,root_n=False,ylabel=False):
         fig,axs = plt.subplots()
         fig.set_tight_layout(True)
         x = np.arange(len(self.existing_spread_ts[0][1]))
@@ -545,6 +546,9 @@ class LearningSequence:
         axs.set_xticks(np.arange(0,len(self.evidence_words)))
         axs.set_xticklabels(self.evidence_words,rotation="vertical")
         axs.legend(loc='best')
+        # if ylabel:
+        #     axs.set_ylabel(r"$\sup\mathbb{P}(H|E_n)-\inf\mathbb{P}(H|E_n)$")
+        # Don't know how to allow labels to use \mathbb or \overline
 
     # currently the iter_ts switch does nothing.
     # in the future, it will allow iterative alpha cut discrepancy graphs too
@@ -561,6 +565,7 @@ class LearningSequence:
         x = np.linspace(0,1,128)
         fig,axs = plt.subplots()
         i = 0
+        axs.set_xlabel("Chance of heads")
         for arr in self.GC_list:
             a,b = arr.array[idx]
             axs.plot(x,stats.beta.pdf(x,a,b),label=arr.array[idx],lw=2)
