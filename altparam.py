@@ -59,8 +59,9 @@ T = [6,3,5]
 
 # we only use the first two of these.
 
-fig,axs = plt.subplots(1,3)
-
+figg,axs = plt.subplots(1,3,figsize=(16,5))
+#fig.set_size_inches(10,3)
+#,figsize=(8,2)
 
 for p in phip:
     y = stats.beta.pdf(x, p*mu,p*nu)
@@ -92,9 +93,11 @@ for i in [0,1,2]:
     axs[i].set_xlabel("Chance of heads")
     axs[i].legend(loc="best")
     # axs[i].axis('square')
-    axs[i].set_aspect(np.diff(axs[i].get_xlim())/np.diff(axs[i].get_ylim()))
+    # axs[i].set_aspect(np.diff(axs[i].get_xlim())/np.diff(axs[i].get_ylim()))
 
+plt.tight_layout
 
+plt.savefig("fix-mu-learn.png")
 #plt.close('all')
 
 
