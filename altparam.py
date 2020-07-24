@@ -54,15 +54,17 @@ plt.close('all')
 
 # We're fixing mu'
 
+
 H = [2,5,3]
 T = [6,3,5]
 
 # we only use the first two of these.
 
-figg,axs = plt.subplots(1,3,figsize=(16,5))
+figg,axs = plt.subplots(3,1,figsize=(5,16))
 #fig.set_size_inches(10,3)
 #,figsize=(8,2)
-
+mu = 0.9
+nu=1-mu
 for p in phip:
     y = stats.beta.pdf(x, p*mu,p*nu)
     axs[0].plot(x,y, label = r"$\phi = {}$".format(p))
@@ -83,19 +85,22 @@ for p in phip:
     w = stats.beta.pdf(x,phi_2*mu_2, phi_2*nu_2)
     axs[2].plot(x,w,label = r"$\phi = {}$".format(phi_2))
 
-
+axs[0].set_title("Prior",x=0.3)
+axs[1].set_title("Updated on H={},T={}".format(H[0],T[0]),y=0.95,x=0.3)
+axs[2].set_title("Updated on H={},T={}".format(H[1],T[1]),y=0.9,x=0.3)
+axs[2].set_xlabel("Chance of heads")
+    
 for i in [0,1,2]:
     axs[i].axes.get_yaxis().set_visible(False)
     # axs[i].set_title(r"Beta distributions for $\mu' = {}, \nu' = {}$".format(mu,nu))
     for spine in ["left", "top", "right"]:
         axs[i].spines[spine].set_visible(False)
     axs[i].xaxis.set_ticks_position('bottom')
-    axs[i].set_xlabel("Chance of heads")
-    axs[i].legend(loc="best")
+    axs[i].legend(loc="center left")
     # axs[i].axis('square')
     # axs[i].set_aspect(np.diff(axs[i].get_xlim())/np.diff(axs[i].get_ylim()))
 
-plt.tight_layout
+fig.tight_layout()
 
 plt.savefig("fix-mu-learn.png")
 #plt.close('all')
