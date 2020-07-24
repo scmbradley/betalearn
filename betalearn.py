@@ -414,7 +414,7 @@ class LearningSequence:
 
 
     # Graphing as a method of LearningSequence
-    def _red_grey(self,ts_red,ts_grey,ylabel=False):
+    def _red_grey(self,ts_red,ts_grey,ylabel=False,idm_lines = False):
         fig,axs=plt.subplots()
         fig.set_tight_layout(True)
         # +1 here for the prior
@@ -425,6 +425,8 @@ class LearningSequence:
         for i in np.arange(self.prior.array_size):
             y = ts_red(i)
             axs.plot(x,y,color='r',linewidth=1,marker=".")
+        if idm_lines != False:
+            pass
         axs.set_xticks(np.arange(0,len(self.evidence_words)))
         axs.set_xticklabels(self.evidence_words,rotation="vertical")
         if ylabel:
