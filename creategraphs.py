@@ -43,7 +43,8 @@ bigg = bl.LearningSequence(
     bl.EvidenceStream(0.3,32,4),
     totev_alpha_fast= 0.01,
     iter_alpha_fast = 0.01,
-    permuted_evidence_fast= True)
+    permuted_evidence_fast= True,
+    idm_lines=8)
 
 bigg.commutativity(fast=True)
 plt.savefig("commutativity.png")

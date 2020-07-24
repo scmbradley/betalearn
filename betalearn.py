@@ -264,7 +264,8 @@ class LearningSequence:
                  iter_alpha = 0, iter_alpha_fast=0,
                  totev_alpha = 0, totev_alpha_fast = 0,
                  permuted_evidence=False,
-                 permuted_evidence_fast=False):
+                 permuted_evidence_fast=False,
+                 idm_lines=False):
         assert isinstance(prior,BetaArray), "prior is not a BetaArray"
         assert isinstance(evidence_stream,EvidenceStream), "evidence is not an EvidenceStream"
 #        assert evidence_stream.shape[1] == 2, "evidence stream is wrong shape"
@@ -328,6 +329,14 @@ class LearningSequence:
             print("Couldn't generate totev discrepancy array: missing information")
             print(err)
         # make a wrapper to allow iter discrepancy, and max rather than mean disc.
+
+        if idm_lines != False:
+            numerator_lower = np.append(np.array([0]),self.evidence_stream.cumulative[:,0])
+            numerator_upper = np.append(np.array([0]),self.evidence_stream.cumulative[:,0]) +idm_lines
+            denominator = np.append(np.array([0]),
+                                    np.sum(self.evidence_stream.cumulative,axis=1)) + idm_lines
+            self.lower_idm_ts = numerator_lower/denominator
+            self.upper_idm_ts = numerator_upper/denominator
         
 
     def _gen_array_list(self, evidence_stream, alpha, prior, fast=False, iterative=False):
@@ -426,7 +435,8 @@ class LearningSequence:
             y = ts_red(i)
             axs.plot(x,y,color='r',linewidth=1,marker=".")
         if idm_lines != False:
-            pass
+            axs.plot(x,self.lower_idm_ts,color='b',linewidth=2)
+            axs.plot(x,self.upper_idm_ts,color='b',linewidth=2)
         axs.set_xticks(np.arange(0,len(self.evidence_words)))
         axs.set_xticklabels(self.evidence_words,rotation="vertical")
         if ylabel:
@@ -441,10 +451,10 @@ class LearningSequence:
         self._red_grey(self.ts_iter_alpha_fast,self.ts_GC)
 
     def graph_totev_v_GC(self):
-        self._red_grey(self.ts_totev_alpha,self.ts_GC,ylabel=True)
+        self._red_grey(self.ts_totev_alpha,self.ts_GC,ylabel=True,idm_lines=True)
 
     def graph_totev_fast_v_GC(self):
-        self._red_grey(self.ts_totev_alpha_fast,self.ts_GC)
+        self._red_grey(self.ts_totev_alpha_fast,self.ts_GC,idm_lines=True)
 
     def graph_iter_v_totev(self):
         self._red_grey(self.ts_totev_alpha,self.ts_iter_alpha)
@@ -585,10 +595,10 @@ class LearningSequence:
 
 # todo:
 # multiple alpha values
-# IDM? (throw out all priors with high t value?)
 # Discrepancy : log plots
 # Implement contour plots in EvidenceStream
 # Alternative parametrisation BetaPriors (a la IDM)
+# use kwargs to pass options around to the helper functions for creating graphs
         
 def spread_test():
     foo = LearningSequence(BetaPrior(8), EvidenceStream(0.3,8,8),
@@ -604,7 +614,7 @@ def test(fast=True):
 
     else:
         return LearningSequence(
-            BetaPrior(4,randoms=[50,20]), EvidenceStream(0.3,8,8),iter_alpha = 0.5,  iter_alpha_fast=0.5,permuted_evidence=True)
+            BetaPrior(4,randoms=[50,20]), EvidenceStream(0.3,8,8),iter_alpha = 0.5,  iter_alpha_fast=0.5,permuted_evidence=True,idm_lines=8)
 
 def graph_test():
     foo = test()
