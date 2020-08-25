@@ -506,12 +506,12 @@ class LearningSequence:
     def two_graph_iter_iter_fast(self):
         self._two_graphs(
             self.ts_iter_alpha,self.ts_iter_alpha_fast,
-            top_label="Iterative\n alpha cut",bottom_label="Fast iterative\n alpha cut")
+            top_label="Iterative\n alpha cut",bottom_label="Approx iterative\n alpha cut")
         
     def two_graph_totev_totev_fast(self):
         self._two_graphs(
             self.ts_totev_alpha,self.ts_totev_alpha_fast,
-            top_label="Total evidence\n alpha cut",bottom_label="Fast total evidence\n alpha cut")
+            top_label="Total evidence\n alpha cut",bottom_label="Approx total evidence\n alpha cut")
 
     def two_graph_iter_totev(self):
         self._two_graphs(

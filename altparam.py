@@ -1,4 +1,3 @@
-
 from scipy import stats
 import numpy as np
 import matplotlib.pyplot as plt
@@ -36,8 +35,8 @@ plt.savefig("fix-phi.png")
 # Fix phi learn
 ##############################
 
-H = [2,5,3]
-T = [6,3,5]
+H = [2,4,3]
+T = [6,4,5]
 
 fig,axs = plt.subplots(3,1,figsize = (8,13))
 for p in arr:
@@ -110,15 +109,15 @@ plt.close('all')
 # Fix mu learn
 ##############################
 
-H = [2,5,3]
-T = [6,3,5]
+H = [2,4,3]
+T = [6,4,5]
 
 # we only use the first two of these.
 
 figg,axs = plt.subplots(3,1,figsize=(8,13))
 #fig.set_size_inches(10,3)
 #,figsize=(8,2)
-mu = 0.9
+mu = 0.8
 nu=1-mu
 for p in phip:
     y = stats.beta.pdf(x, p*mu,p*nu)
@@ -140,7 +139,7 @@ for p in phip:
     w = stats.beta.pdf(x,phi_2*mu_2, phi_2*nu_2)
     axs[2].plot(x,w,label = r"$\phi = {}$".format(phi_2))
 
-axs[0].set_title("Prior",x=0.3)
+axs[0].set_title("Prior",x=0.3,y=0.7)
 axs[1].set_title("Updated on H={},T={}".format(H[0],T[0]),y=0.95,x=0.3)
 axs[2].set_title("Updated on H={},T={}".format(H[1],T[1]),y=0.9,x=0.3)
 axs[2].set_xlabel("Chance of heads")
@@ -155,7 +154,7 @@ for i in [0,1,2]:
     # axs[i].axis('square')
     # axs[i].set_aspect(np.diff(axs[i].get_xlim())/np.diff(axs[i].get_ylim()))
 
-fig.tight_layout()
+figg.tight_layout()
 
 plt.savefig("fix-mu-learn.png")
 #plt.close('all')
