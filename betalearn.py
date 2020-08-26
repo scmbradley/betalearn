@@ -218,18 +218,28 @@ class BetaAltParam(BetaArray):
         phi_list=[]
         mu_list=[]
         # First, we generate the phi_list and mu_list
-        if phi_fix:
-            if phi_int:
-                phi_list = np.random.randint(phi_min,high=phi_max)*np.ones(size)
-            else:
-                phi_list = np.random.uniform(low=phi_min,high=phi_max)*np.ones(size)
+        if phi_fix!=False:
+            try:
+                phi_list = phi_fix*np.ones(size)
+            except TypeError as err:
+                print("phi_fix should be an int. Defaulting to random")
+                print(err)
+                if phi_int:
+                    phi_list = np.random.randint(phi_min,high=phi_max)*np.ones(size)
+                else:
+                    phi_list = np.random.uniform(low=phi_min,high=phi_max)*np.ones(size)
         else:
             if phi_int:
                 phi_list = np.random.randint(phi_min,high=phi_max,size=size)
             else:
                 phi_list = np.random.uniform(low=phi_min,high=phi_max, size=size)
-        if mu_fix:
-            mu_list = np.random.uniform()*np.ones(size)
+        if mu_fix!=False:
+            try:
+                mu_list = mu_fix*np.ones(size)
+            except TypeError as err:
+                print("mu_fix should be an int. Defaulting to random")
+                print(err)
+                mu_list = np.random.uniform()*np.ones(size)
         elif param_spaced:
             mu_list = np.linspace(0,1,8)
         else:
@@ -640,14 +650,30 @@ class LearningSequence:
         axs.legend(loc='best')
 
     
+    def simple_graph(self):
+        fig,axs=plt.subplots()
+        fig.set_tight_layout=True
+        axs.set_xlabel("Chance of heads")
+        x = np.arange(0,self.evidence_length+1)
+        params = self.prior.alt_param_array()
+        axs.set_ylim([0,1])
+        for i in np.arange(self.prior.array_size):
+            y = self.ts_GC(i)
+            axs.plot(x,y,linewidth=1,label=params[i])
+        axs.set_xticks(np.arange(0,len(self.evidence_words)))
+        axs.set_xticklabels(self.evidence_words,rotation="vertical")
+        axs.legend(loc='best')
+            
+            
+
         
 
 # todo:
 # multiple alpha values
 # Discrepancy : log plots
 # Implement contour plots in EvidenceStream
-# Alternative parametrisation BetaPriors (a la IDM)
 # use kwargs to pass options around to the helper functions for creating graphs
+# sensible defaults for all the classes, so I can call without arguments
         
 def spread_test():
     foo = LearningSequence(BetaPrior(8), EvidenceStream(0.3,8,8),
@@ -665,9 +691,10 @@ def test(fast=True):
         return LearningSequence(
             BetaPrior(4,randoms=[50,20]), EvidenceStream(0.3,8,8),iter_alpha = 0.5,  iter_alpha_fast=0.5,permuted_evidence=True,idm_lines=8)
 
-def graph_test():
-    foo = test()
-    foo.spread_graph(foo.iter_alpha_fast_spread_ts)
-    plt.show()
+
+def alt_test():
+    foo = LearningSequence(BetaAltParam(size=8,mu_fix=True), EvidenceStream(0.3,8,8),
+                           totev_alpha=0.5)
+    foo.simple_graph()
     
     
