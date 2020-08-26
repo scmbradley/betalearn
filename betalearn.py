@@ -124,6 +124,14 @@ class BetaArray:
         arr2, pr2 = self.alpha_cut_test(evidence,alpha)
         return pr1-pr2
 
+    def alt_param_array(self):
+        """
+        Returns the alternative parameter representation, listing phi first
+        """
+        phi_list = self.array[:,0]+self.array[:,1]
+        mu_list = self.array[:,0]/phi_list
+        return np.transpose(np.array((phi_list,mu_list)))
+
     ## The test works. betabinom essentially gives the same result as integrating.
     ## so now to drop it in and see if it's faster.
 
@@ -195,8 +203,48 @@ class BetaPrior(BetaArray):
         self.prob_of_heads=self.array[:,0]/np.sum(self.array,axis=1)
         self._set_spread()
             
+class BetaAltParam(BetaArray):
+    """
+    Creates a beta prior using the alternative parametrisation
 
+    phi_min,phi_max set the minimum and maximum value for phi
+    phi_int determines whether values for phi are ints or floats
+    size is the number of priors to draw
+    phi_fix and mu_fix determine whether a single value of (phi,mu) is drawn for all priors
+    param_spaced determines whether the parameters are drawn randomly or evenly spaced (only 
+    takes effect if phi_fix or mu_fix is true, currently implemented for mu only) 
+    """
+    def __init__(self,phi_min=1,phi_max=16,phi_int=True,size=8,param_spaced=False,phi_fix=False,mu_fix = False):
+        phi_list=[]
+        mu_list=[]
+        # First, we generate the phi_list and mu_list
+        if phi_fix:
+            if phi_int:
+                phi_list = np.random.randint(phi_min,high=phi_max)*np.ones(size)
+            else:
+                phi_list = np.random.uniform(low=phi_min,high=phi_max)*np.ones(size)
+        else:
+            if phi_int:
+                phi_list = np.random.randint(phi_min,high=phi_max,size=size)
+            else:
+                phi_list = np.random.uniform(low=phi_min,high=phi_max, size=size)
+        if mu_fix:
+            mu_list = np.random.uniform()*np.ones(size)
+        elif param_spaced:
+            mu_list = np.linspace(0,1,8)
+        else:
+            mu_list = np.random.uniform(size=8)
 
+        # Next, we take the lists of params, and translate them into mu and nu for BetaArray
+        mup = phi_list*mu_list
+        nup = phi_list*(1-mu_list)
+        index_array = np.transpose(np.array((mup,nup)))
+
+        # Finally, set the class properties we shall need later.
+        self.array = index_array
+        self.array_size = self.array.shape[0]
+        self.prob_of_heads=self.array[:,0]/np.sum(self.array,axis=1)
+        self._set_spread()
 
 # Create an evidence class that we can iterate over.
 
@@ -421,8 +469,9 @@ class LearningSequence:
         self.existing_spread_ts.append([name,obj])
         return obj
 
-
+    
     # Graphing as a method of LearningSequence
+    
     def _red_grey(self,ts_red,ts_grey,ylabel=False,idm_lines = False):
         fig,axs=plt.subplots()
         fig.set_tight_layout(True)
