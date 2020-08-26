@@ -213,8 +213,9 @@ class BetaAltParam(BetaArray):
     phi_fix and mu_fix determine whether a single value of (phi,mu) is drawn for all priors
     param_spaced determines whether the parameters are drawn randomly or evenly spaced (only 
     takes effect if phi_fix or mu_fix is true, ignores phi_max) 
+    phi_step determines the size of the increment for phi if param_spaced is True
     """
-    def __init__(self,phi_min=1,phi_max=16,phi_int=True,size=8,param_spaced=False,phi_fix=False,mu_fix = False):
+    def __init__(self,phi_min=1,phi_max=16,phi_int=True,size=8,param_spaced=False,phi_fix=False,mu_fix = False, phi_step=1):
         phi_list=[]
         mu_list=[]
         # First, we generate the phi_list and mu_list
@@ -229,7 +230,7 @@ class BetaAltParam(BetaArray):
                 else:
                     phi_list = np.random.uniform(low=phi_min,high=phi_max)*np.ones(size)
         elif param_spaced:
-            phi_list = np.arange(phi_min,phi_min+size)
+            phi_list = np.arange(phi_min,phi_min+(size*phi_step),phi_step)
         else:
             if phi_int:
                 phi_list = np.random.randint(phi_min,high=phi_max,size=size)
@@ -246,6 +247,11 @@ class BetaAltParam(BetaArray):
             mu_list = np.linspace(0,1,8)
         else:
             mu_list = np.random.uniform(size=8)
+        if param_spaced ==True and (phi_fix or mu_fix)==False:
+            print("""
+            Warning: param_spaced is true, but neither of phi_fix or mu_fix is true.
+            This will yield weird priors.
+            """)
 
         # Next, we take the lists of params, and translate them into mu and nu for BetaArray
         mup = phi_list*mu_list

@@ -99,14 +99,14 @@ fix_phi_run = bl.LearningSequence(
     evi
 )
 fix_phi_run.simple_graph()
-plt.savefig("fix_phi_run.png")
+plt.savefig("fix-phi-run.png")
 
 fix_mu_run = bl.LearningSequence(
-    bl.BetaAltParam(mu_fix=0.7,param_spaced=True),
+    bl.BetaAltParam(mu_fix=0.7,param_spaced=True,phi_step=3),
     evi
 )
 fix_mu_run.simple_graph()
-plt.savefig("fix_mu_run.png")
+plt.savefig("fix-mu-run.png")
 plt.close('all')
 
     
