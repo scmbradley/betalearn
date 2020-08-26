@@ -212,7 +212,7 @@ class BetaAltParam(BetaArray):
     size is the number of priors to draw
     phi_fix and mu_fix determine whether a single value of (phi,mu) is drawn for all priors
     param_spaced determines whether the parameters are drawn randomly or evenly spaced (only 
-    takes effect if phi_fix or mu_fix is true, currently implemented for mu only) 
+    takes effect if phi_fix or mu_fix is true, ignores phi_max) 
     """
     def __init__(self,phi_min=1,phi_max=16,phi_int=True,size=8,param_spaced=False,phi_fix=False,mu_fix = False):
         phi_list=[]
@@ -228,6 +228,8 @@ class BetaAltParam(BetaArray):
                     phi_list = np.random.randint(phi_min,high=phi_max)*np.ones(size)
                 else:
                     phi_list = np.random.uniform(low=phi_min,high=phi_max)*np.ones(size)
+        elif param_spaced:
+            phi_list = np.arange(phi_min,phi_min+size)
         else:
             if phi_int:
                 phi_list = np.random.randint(phi_min,high=phi_max,size=size)
@@ -659,7 +661,7 @@ class LearningSequence:
         axs.set_ylim([0,1])
         for i in np.arange(self.prior.array_size):
             y = self.ts_GC(i)
-            axs.plot(x,y,linewidth=1,label=params[i])
+            axs.plot(x,y,linewidth=1,label=r"$\phi = {:.2f}, \mu = {:.2f}$".format(params[i][0],params[i][1]))
         axs.set_xticks(np.arange(0,len(self.evidence_words)))
         axs.set_xticklabels(self.evidence_words,rotation="vertical")
         axs.legend(loc='best')

@@ -90,6 +90,25 @@ print("iter v totev saved")
 # execfile('altparam.py')
 
 plt.close('all')
+
+# Run short sims for fixed phi and fixed mu
+evi = bl.EvidenceStream(0.3,8,8)
+
+fix_phi_run = bl.LearningSequence(
+    bl.BetaAltParam(phi_fix=8,param_spaced=True),
+    evi
+)
+fix_phi_run.simple_graph()
+plt.savefig("fix_phi_run.png")
+
+fix_mu_run = bl.LearningSequence(
+    bl.BetaAltParam(mu_fix=0.7,param_spaced=True),
+    evi
+)
+fix_mu_run.simple_graph()
+plt.savefig("fix_mu_run.png")
+plt.close('all')
+
     
 duration = tmr() - start
 print("time elapsed in seconds:", duration)
