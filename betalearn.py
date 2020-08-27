@@ -667,7 +667,7 @@ class LearningSequence:
         axs.set_ylim([0,1])
         for i in np.arange(self.prior.array_size):
             y = self.ts_GC(i)
-            axs.plot(x,y,linewidth=1,label=r"$\phi = {:.2f}, \mu = {:.2f}$".format(params[i][0],params[i][1]))
+            axs.plot(x,y,linewidth=1,label=r"$\phi = {}, \mu = {:.2f}$".format(params[i][0],params[i][1]))
         axs.set_xticks(np.arange(0,len(self.evidence_words)))
         axs.set_xticklabels(self.evidence_words,rotation="vertical")
         axs.legend(loc='best')

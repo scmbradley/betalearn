@@ -92,7 +92,7 @@ print("iter v totev saved")
 plt.close('all')
 
 # Run short sims for fixed phi and fixed mu
-evi = bl.EvidenceStream(0.3,8,8)
+evi = bl.EvidenceStream(0.3,8,4)
 
 fix_phi_run = bl.LearningSequence(
     bl.BetaAltParam(phi_fix=8,param_spaced=True),
@@ -102,7 +102,7 @@ fix_phi_run.simple_graph()
 plt.savefig("fix-phi-run.png")
 
 fix_mu_run = bl.LearningSequence(
-    bl.BetaAltParam(mu_fix=0.7,param_spaced=True,phi_step=3),
+    bl.BetaAltParam(mu_fix=0.3,param_spaced=True,phi_step=3),
     evi
 )
 fix_mu_run.simple_graph()
