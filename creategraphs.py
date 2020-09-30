@@ -92,7 +92,7 @@ print("iter v totev saved")
 plt.close('all')
 
 # Run short sims for fixed phi and fixed mu
-evi = bl.EvidenceStream(0.3,8,4)
+evi = bl.EvidenceStream(0.7,8,4)
 
 fix_phi_run = bl.LearningSequence(
     bl.BetaAltParam(phi_fix=8,param_spaced=True),
