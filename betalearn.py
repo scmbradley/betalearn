@@ -670,8 +670,8 @@ class LearningSequence:
             axs.plot(x,y,linewidth=1,label=r"$\lambda = {}, \gamma = {:.2f}$".format(params[i][0],params[i][1]))
         axs.set_xticks(np.arange(0,len(self.evidence_words)))
         axs.set_xticklabels(self.evidence_words,rotation="vertical")
-        axs.legend(loc='best')
-            
+        axs.legend(loc=(1.05,0))
+        plt.tight_layout()
             
 
         
