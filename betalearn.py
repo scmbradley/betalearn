@@ -277,6 +277,9 @@ class EvidenceStream:
     So: you get length pieces of evidence each of which tell you how number_samples flips landed.
     """
     def __init__(self,true_theta,length,number_samples):
+        # Literally this first line is where all the action is,
+        # or the first two lines at least.
+        # Everything else is then just making it easy to get at the data.
         evarr = stats.binom.rvs(number_samples,true_theta,size=length)
         self.evidence= np.transpose(np.append(evarr,(np.ones(length,dtype=int)*number_samples)-evarr).reshape(2,length))
         self.permuted = np.random.permutation(self.evidence)
@@ -661,7 +664,8 @@ class LearningSequence:
     def simple_graph(self):
         fig,axs=plt.subplots()
         fig.set_tight_layout=True
-        axs.set_xlabel("Chance of heads")
+        axs.set_xlabel("Evidence")
+        axs.set_ylabel("Probability of heads",rotation="vertical")
         x = np.arange(0,self.evidence_length+1)
         params = self.prior.alt_param_array()
         axs.set_ylim([0,1])
