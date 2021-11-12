@@ -41,7 +41,7 @@ T = [6,4,5]
 fig,axs = plt.subplots(3,1,figsize = (8,13))
 for p in arr:
     y = stats.beta.pdf(x,phi*p[0],phi*p[1])
-    axs[0].plot(x,y,label = r'$\gamma^\prime = {:.2f}$'.format(p[0]))
+    axs[0].plot(x,y,label = r'$\gamma = {:.2f}$'.format(p[0]))
     h = H[0]
     t = T[0]
     n = h+t
@@ -49,7 +49,7 @@ for p in arr:
     mu_1 = (h+phi*p[0])/phi_1
     nu_1 = 1-mu_1
     w = stats.beta.pdf(x,phi_1*mu_1,phi_1*nu_1)
-    axs[1].plot(x,w,label = r'$\gamma^\prime = {:.2f}$'.format(mu_1))
+    axs[1].plot(x,w,label = r'$\gamma = {:.2f}$'.format(mu_1))
     h_1 = H[1]
     t_1=T[1]
     n = h_1+t_1
@@ -57,7 +57,7 @@ for p in arr:
     mu_2 = (h_1+phi_1*mu_1)/phi_2
     nu_2 = 1-mu_1
     z = stats.beta.pdf(x,phi_2*mu_2,phi_2*nu_2)
-    axs[2].plot(x,z,label = r'$\gamma^\prime = {:.2f}$'.format(mu_2))
+    axs[2].plot(x,z,label = r'$\gamma = {:.2f}$'.format(mu_2))
 
 axs[0].set_title("Prior",x=0.7)
 axs[1].set_title("Updated on H={},T={}".format(H[0],T[0]),y=0.95,x=0.7)

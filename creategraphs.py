@@ -1,7 +1,9 @@
 import betalearn as bl
+
 print(bl)
 
-from numpy.random import seed 
+from numpy.random import seed
+
 seed(seed=42)
 
 from time import monotonic as tmr
@@ -14,10 +16,11 @@ start = tmr()
 
 print("Running smaller slower simulation")
 ls = bl.LearningSequence(
-    bl.BetaPrior(8,fillers=True),
-    bl.EvidenceStream(0.3,16,8),
+    bl.BetaPrior(8, fillers=True),
+    bl.EvidenceStream(0.3, 16, 8),
     totev_alpha=0.1,
-    totev_alpha_fast=0.1)
+    totev_alpha_fast=0.1,
+)
 
 ls.two_graph_totev_totev_fast()
 plt.savefig("two-graph-fast.png")
@@ -39,19 +42,20 @@ plt.clf()
 
 print("Running bigger faster simulation")
 bigg = bl.LearningSequence(
-    bl.BetaPrior(8,fillers=True,stubborns=[20,5]),
-    bl.EvidenceStream(0.3,32,4),
-    totev_alpha_fast= 0.01,
-    iter_alpha_fast = 0.01,
-    permuted_evidence_fast= True,
-    idm_lines=8)
+    bl.BetaPrior(8, fillers=True, stubborns=[20, 5]),
+    bl.EvidenceStream(0.3, 32, 4),
+    totev_alpha_fast=0.01,
+    iter_alpha_fast=0.01,
+    permuted_evidence_fast=True,
+    idm_lines=8,
+)
 
 bigg.commutativity(fast=True)
 plt.savefig("commutativity.png")
 print("commutativity graph saved")
 plt.clf()
 
-bigg.all_spread(root_n=True,ylabel=True)
+bigg.all_spread(root_n=True, ylabel=True)
 plt.savefig("spread.png")
 print("spread graph saved")
 plt.clf()
@@ -70,10 +74,11 @@ plt.clf()
 # to illustrate that iter_alpha gets stuck.
 
 ha = bl.LearningSequence(
-    bl.BetaPrior(8,fillers=True,stubborns = [30,6]),
-    bl.EvidenceStream(0.3,64,2),
+    bl.BetaPrior(8, fillers=True, stubborns=[30, 6]),
+    bl.EvidenceStream(0.3, 64, 2),
     totev_alpha=0.05,
-    iter_alpha=0.05)
+    iter_alpha=0.05,
+)
 ha.two_graph_iter_totev()
 plt.savefig("iter-v-totev.png")
 print("iter v totev saved")
@@ -89,27 +94,32 @@ print("iter v totev saved")
 
 # execfile('altparam.py')
 
-plt.close('all')
+plt.close("all")
 
 # Run short sims for fixed phi and fixed mu
-evi = bl.EvidenceStream(0.7,8,4)
+evi = bl.EvidenceStream(0.7, 8, 4)
 
-fix_phi_run = bl.LearningSequence(
-    bl.BetaAltParam(phi_fix=8,param_spaced=True),
-    evi
-)
+fix_phi_run = bl.LearningSequence(bl.BetaAltParam(phi_fix=8, param_spaced=True), evi)
 fix_phi_run.simple_graph()
 plt.savefig("fix-phi-run.png")
 
 fix_mu_run = bl.LearningSequence(
-    bl.BetaAltParam(mu_fix=0.3,param_spaced=True,phi_step=3),
-    evi
+    bl.BetaAltParam(mu_fix=0.3, param_spaced=True, phi_step=3), evi
 )
 fix_mu_run.simple_graph()
 plt.savefig("fix-mu-run.png")
-plt.close('all')
+plt.close("all")
 
-    
+evi_inertia = bl.EvidenceStream(0.8, 8, 4)
+
+inertia_run = bl.LearningSequence(
+    bl.BetaAltParam(mu_fix=0.2, param_spaced=True, phi_step=12, size=12), evi_inertia
+)
+inertia_run.simple_graph()
+plt.savefig("inertia-run.png")
+plt.close("all")
+
+
 duration = tmr() - start
 print("time elapsed in seconds:", duration)
 
